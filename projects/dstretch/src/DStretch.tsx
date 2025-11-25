@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Download, RotateCcw, Eye, Menu, X } from 'lucide-react';
+import { Upload, Download, RotateCcw, Eye, Menu, X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import heic2any from 'heic2any';
 import UTIF from 'utif';
 
@@ -26,6 +26,12 @@ const DStretch = () => {
   const [sharpening, setSharpening] = useState(0);
   const [sharpenAlgorithm, setSharpenAlgorithm] = useState<'unsharp' | 'highpass' | 'laplacian'>('unsharp');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStartX, setPanStartX] = useState(0);
+  const [panStartY, setPanStartY] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -768,6 +774,51 @@ const DStretch = () => {
     }
   };
 
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev * 1.25, 10));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev / 1.25, 0.1));
+  };
+
+  const handleZoomFit = () => {
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY;
+      if (delta < 0) {
+        handleZoomIn();
+      } else {
+        handleZoomOut();
+      }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (zoom > 1) {
+      setIsPanning(true);
+      setPanStartX(e.clientX - panX);
+      setPanStartY(e.clientY - panY);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isPanning && zoom > 1) {
+      setPanX(e.clientX - panStartX);
+      setPanY(e.clientY - panStartY);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
   const resetSettings = () => {
     setBrightness(100);
     setContrast(100);
@@ -781,6 +832,9 @@ const DStretch = () => {
     setSharpening(0);
     setFilter('none');
     setLightingPreset('none');
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
   };
 
   return (
@@ -842,6 +896,33 @@ const DStretch = () => {
               <RotateCcw size={14} />
               <span className="hidden sm:inline">Reset</span>
             </button>
+            <button
+              onClick={handleZoomOut}
+              disabled={!image}
+              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
+              title="Zoom out (Ctrl/Cmd + Scroll)"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <button
+              onClick={handleZoomFit}
+              disabled={!image}
+              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
+              title="Fit to view (Reset zoom)"
+            >
+              <Maximize2 size={14} />
+            </button>
+            <button
+              onClick={handleZoomIn}
+              disabled={!image}
+              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
+              title="Zoom in (Ctrl/Cmd + Scroll)"
+            >
+              <ZoomIn size={14} />
+            </button>
+            <span className="hidden md:inline text-xs text-gray-500">
+              {zoom !== 1 ? `${Math.round(zoom * 100)}%` : ''}
+            </span>
             <button
               onClick={downloadImage}
               disabled={!image || isDownloading}
@@ -913,13 +994,13 @@ const DStretch = () => {
                     <label className="block text-[10px] font-medium mb-1 text-gray-400 uppercase tracking-wide">
                       {group.title}
                     </label>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1">
                       {Object.entries(group.filters).map(([key, filterInfo]) => (
                         <button
                           key={key}
                           onClick={() => setFilter(key)}
                           title={filterInfo.desc}
-                          className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                          className={`flex-1 min-w-[45px] px-1.5 py-0.5 rounded text-[10px] font-medium transition-all ${
                             filter === key
                               ? 'bg-blue-600 text-white shadow-lg'
                               : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
@@ -1142,7 +1223,15 @@ const DStretch = () => {
             </div>
           )}
 
-          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+          <div
+            className="flex-1 flex items-center justify-center p-4 overflow-hidden"
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{ cursor: isPanning ? 'grabbing' : zoom > 1 ? 'grab' : 'default' }}
+          >
             {!image ? (
               <div className="text-center text-gray-500">
                 <Upload size={64} className="mx-auto mb-4 opacity-30" />
@@ -1150,14 +1239,22 @@ const DStretch = () => {
                 <p className="text-sm text-gray-600">Drag and drop or use the upload button</p>
               </div>
             ) : (
-              <div className="relative max-w-full max-h-full flex items-center justify-center">
+              <div
+                className="relative max-w-full max-h-full flex items-center justify-center"
+                style={{
+                  transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
+                  transformOrigin: 'center center',
+                  transition: isPanning ? 'none' : 'transform 0.1s ease-out'
+                }}
+              >
                 <canvas
                   ref={canvasRef}
                   className="border border-gray-700 shadow-2xl"
                   style={{
                     maxWidth: '100%',
                     maxHeight: 'calc(100vh - 120px)',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    pointerEvents: 'none'
                   }}
                 />
               </div>
