@@ -882,19 +882,20 @@ const DStretch = () => {
 
             {/* Histogram Display */}
             {histogram && image && (
-              <div className="hidden lg:block bg-gray-900 rounded p-2 border border-gray-700" title="RGB Histogram: Shows distribution of red, green, and blue tones. Peaks on left = dark pixels, right = bright pixels. Use to check if colors are clipping or if image needs adjustment.">
-                <div className="flex items-end gap-px h-12 w-64">
+              <div className="hidden md:block bg-gray-900 rounded p-2 border border-gray-700" title="RGB Histogram: Shows distribution of red, green, and blue tones. Peaks on left = dark pixels, right = bright pixels. Use to check if colors are clipping or if image needs adjustment.">
+                <div className="flex items-end gap-px h-12 w-48 md:w-64">
                   {Array.from({ length: 64 }).map((_, i) => {
                     const binSize = 4;
                     const rVal = histogram.r.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
                     const gVal = histogram.g.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
                     const bVal = histogram.b.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
                     const max = Math.max(...histogram.r, ...histogram.g, ...histogram.b);
+                    const minHeight = 2; // Minimum height in pixels to make bars visible
                     return (
-                      <div key={i} className="flex-1 flex flex-col justify-end items-center gap-px">
-                        <div className="w-full bg-red-500 opacity-50" style={{ height: `${(rVal / max) * 100}%` }}></div>
-                        <div className="w-full bg-green-500 opacity-50" style={{ height: `${(gVal / max) * 100}%` }}></div>
-                        <div className="w-full bg-blue-500 opacity-50" style={{ height: `${(bVal / max) * 100}%` }}></div>
+                      <div key={i} className="flex-1 flex flex-col justify-end items-center gap-px min-h-[2px]">
+                        <div className="w-full bg-red-500 opacity-70" style={{ height: `${Math.max(minHeight, (rVal / max) * 100)}%` }}></div>
+                        <div className="w-full bg-green-500 opacity-70" style={{ height: `${Math.max(minHeight, (gVal / max) * 100)}%` }}></div>
+                        <div className="w-full bg-blue-500 opacity-70" style={{ height: `${Math.max(minHeight, (bVal / max) * 100)}%` }}></div>
                       </div>
                     );
                   })}
