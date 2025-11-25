@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Download, RotateCcw, Sliders, Square, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, Download, RotateCcw, Eye, Menu, X } from 'lucide-react';
+import heic2any from 'heic2any';
+import UTIF from 'utif';
 
 const DStretch = () => {
-  const [image, setImage] = useState(null);
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [filter, setFilter] = useState('none');
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
@@ -12,48 +15,259 @@ const DStretch = () => {
   const [shadowRecovery, setShadowRecovery] = useState(0);
   const [highlightRecovery, setHighlightRecovery] = useState(0);
   const [adaptiveEnhancement, setAdaptiveEnhancement] = useState(false);
-  const [maskMode, setMaskMode] = useState(false);
-  const [maskThreshold, setMaskThreshold] = useState(50);
-  const [zonedMode, setZonedMode] = useState(false);
-  const [zones, setZones] = useState([]);
-  const [currentZone, setCurrentZone] = useState(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const canvasRef = useRef(null);
-  const originalCanvasRef = useRef(null);
-  const overlayCanvasRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
+  const [lightingPreset, setLightingPreset] = useState('none');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('');
+  const [noiseReduction, setNoiseReduction] = useState(0);
+  const [noiseAlgorithm, setNoiseAlgorithm] = useState<'median' | 'gaussian' | 'bilateral'>('median');
+  const [sharpening, setSharpening] = useState(0);
+  const [sharpenAlgorithm, setSharpenAlgorithm] = useState<'unsharp' | 'highpass' | 'laplacian'>('unsharp');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const originalCanvasRef = useRef<HTMLCanvasElement>(null);
+  const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const [histogram, setHistogram] = useState<{ r: number[]; g: number[]; b: number[] } | null>(null);
 
-  const filters = {
-    none: 'Original',
-    adaptive: 'Adaptive DStretch (Smart)',
-    yre: 'YRE (Yellow-Red Enhancement)',
-    yrd: 'YRD (Yellow-Red-Deep)',
-    lre: 'LRE (Long Red Enhancement)',
-    lds: 'LDS (Long Deep Stretch)',
-    lab: 'LAB (L*A*B Enhancement)',
-    crgb: 'CRGB (Color RGB)',
-    ybr: 'YBR (Yellow-Blue-Red)',
-    labi: 'LABI (LAB Invert)'
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          setImage(img);
-          drawOriginal(img);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+  const lightingPresets = {
+    none: {
+      name: 'No Preset',
+      desc: 'Manual adjustment - start from default settings',
+      settings: { brightness: 100, contrast: 100, saturation: 100, shadowRecovery: 0, highlightRecovery: 0, clarity: 0, dehaze: 0 }
+    },
+    hardLight: {
+      name: 'Hard Direct Light',
+      desc: 'Harsh sun or flash. High contrast, blown highlights, deep shadows. Adds shadow/highlight recovery.',
+      settings: { brightness: 100, contrast: 85, saturation: 95, shadowRecovery: 40, highlightRecovery: 50, clarity: 10, dehaze: 0 }
+    },
+    softLight: {
+      name: 'Soft Diffused',
+      desc: 'Overcast or shade. Low contrast, flat. Boosts contrast and saturation for pop.',
+      settings: { brightness: 105, contrast: 125, saturation: 115, shadowRecovery: 0, highlightRecovery: 0, clarity: 25, dehaze: 15 }
+    },
+    goldenHour: {
+      name: 'Golden Hour',
+      desc: 'Early/late sun. Warm tones, good contrast. Minor adjustments to balance colors.',
+      settings: { brightness: 100, contrast: 110, saturation: 105, shadowRecovery: 15, highlightRecovery: 10, clarity: 15, dehaze: 0 }
+    },
+    cave: {
+      name: 'Cave/Deep Overhang',
+      desc: 'Very dark, limited light. Heavy shadows. Maximum shadow recovery and brightness boost.',
+      settings: { brightness: 135, contrast: 115, saturation: 105, shadowRecovery: 80, highlightRecovery: 0, clarity: 30, dehaze: 25 }
+    },
+    filteredLight: {
+      name: 'Filtered (Trees/Canopy)',
+      desc: 'Mixed light through vegetation. Green color cast, uneven. Reduces saturation, adds dehaze.',
+      settings: { brightness: 110, contrast: 115, saturation: 85, shadowRecovery: 25, highlightRecovery: 20, clarity: 20, dehaze: 30 }
+    },
+    rakingLight: {
+      name: 'Raking/Side Light',
+      desc: 'Strong directional side lighting. Good texture, harsh shadows. Balances shadows while keeping detail.',
+      settings: { brightness: 100, contrast: 105, saturation: 100, shadowRecovery: 35, highlightRecovery: 15, clarity: 35, dehaze: 0 }
+    },
+    backlit: {
+      name: 'Backlit/Silhouette',
+      desc: 'Light behind subject. Dark foreground. Aggressive shadow recovery and brightness boost.',
+      settings: { brightness: 150, contrast: 110, saturation: 95, shadowRecovery: 90, highlightRecovery: 60, clarity: 20, dehaze: 20 }
     }
   };
 
-  const drawOriginal = (img) => {
+  const filterGroups = {
+    basic: {
+      title: 'Basic',
+      filters: {
+        none: { name: 'Original', desc: 'No filter - view unprocessed image' },
+        adaptive: { name: 'Adaptive', desc: 'Auto-detects vegetation, shadows, and rock surfaces. Reduces green (lichen/moss), enhances reds in dark areas. Good starting point for mixed conditions.' }
+      }
+    },
+    reds: {
+      title: 'Reds (Faint Ochre/Hematite)',
+      filters: {
+        yre: { name: 'YRE', desc: 'Yellow-Red Enhancement: Strong red enhancement, faster but noisier. Often first choice for pictographs.' },
+        lre: { name: 'LRE', desc: 'Long Red Enhancement: Sharper, less artifact-prone than YRE. Good for iron oxide and hematite pigments.' }
+      }
+    },
+    redsBalanced: {
+      title: 'Reds (General/Balanced)',
+      filters: {
+        yrd: { name: 'YRD', desc: 'Yellow-Red Deep: Pleasing overall red boost with less wild colors. Good for layered sites.' },
+        lrd: { name: 'LRD', desc: 'Long Red Deep: Milder variant with balanced enhancement. Less artifacts than YRD.' }
+      }
+    },
+    general: {
+      title: 'General/Yellows',
+      filters: {
+        yds: { name: 'YDS', desc: 'Yellow Deep Stretch: Versatile starter, highlights faint yellows/greens well.' },
+        lds: { name: 'LDS', desc: 'Long Deep Stretch: LAB variant, reduces JPEG noise for cleaner results.' }
+      }
+    },
+    multiPigment: {
+      title: 'Reds/Blacks (Multi-Pigment)',
+      filters: {
+        ybr: { name: 'YBR', desc: 'Yellow-Blue-Red: For subtle reds/blues. Good for mixed color sites.' },
+        lab: { name: 'LAB', desc: 'L*A*B Color Space: Balanced, noise-resistant all-around use on engravings or mixed colors.' }
+      }
+    },
+    darks: {
+      title: 'Blacks/Blues',
+      filters: {
+        ybk: { name: 'YBK', desc: 'Yellow-Black: Boosts dark pigments. Useful for superposition analysis.' },
+        lbk: { name: 'LBK', desc: 'Long Black: Enhanced dark pigment visibility with blue tones.' }
+      }
+    },
+    yellows: {
+      title: 'Yellows/Whites',
+      filters: {
+        yye: { name: 'YYE', desc: 'Yellow-Yellow Enhancement: Amplifies pale yellows. Quick scans.' },
+        lye: { name: 'LYE', desc: 'Long Yellow Enhancement: Refined edges in schematic art with yellow/white pigments.' },
+        ywe: { name: 'YWE', desc: 'Yellow-White Enhancement: Enhances white pigments. Pairs well with dehazing.' }
+      }
+    },
+    quickScan: {
+      title: 'Quick/High-Contrast',
+      filters: {
+        crgb: { name: 'CRGB', desc: 'Color RGB: Fast for initial red reveals. Vivid but "crazy" colors—great for etchings.' },
+        rgb0: { name: 'RGB0', desc: 'RGB Zero: High-contrast quick scan. Good for initial assessment.' }
+      }
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  };
+
+  const processImageFile = async (file: File) => {
+    setIsProcessing(true);
+    setProcessingMessage('Loading image...');
+
+    let fileToProcess = file;
+
+    // Convert HEIC to JPEG if needed
+    if (file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      try {
+        setProcessingMessage('Converting HEIC image...');
+        const convertedBlob = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 1
+        });
+        fileToProcess = new File(
+          [Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob],
+          file.name.replace(/\.heic$/i, '.jpg'),
+          { type: 'image/jpeg' }
+        );
+      } catch (error) {
+        console.error('HEIC conversion error:', error);
+        alert('Failed to convert HEIC image. Please try a different format.');
+        setIsProcessing(false);
+        setProcessingMessage('');
+        return;
+      }
+    }
+
+    // Convert TIFF to PNG if needed
+    if (file.type === 'image/tiff' || file.type === 'image/tif' ||
+        file.name.toLowerCase().endsWith('.tiff') || file.name.toLowerCase().endsWith('.tif')) {
+      try {
+        setProcessingMessage('Converting TIFF image...');
+        const arrayBuffer = await file.arrayBuffer();
+        const ifds = UTIF.decode(arrayBuffer);
+        UTIF.decodeImage(arrayBuffer, ifds[0]);
+        const rgba = UTIF.toRGBA8(ifds[0]);
+
+        // Create canvas to convert RGBA to data URL
+        const canvas = document.createElement('canvas');
+        canvas.width = ifds[0].width;
+        canvas.height = ifds[0].height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Failed to get canvas context');
+        }
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        imageData.data.set(rgba);
+        ctx.putImageData(imageData, 0, 0);
+
+        // Convert to blob then file
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error('Failed to create blob'));
+          }, 'image/png');
+        });
+        fileToProcess = new File([blob], file.name.replace(/\.tiff?$/i, '.png'), { type: 'image/png' });
+      } catch (error) {
+        console.error('TIFF conversion error:', error);
+        alert('Failed to convert TIFF image. Please try a different format.');
+        setIsProcessing(false);
+        setProcessingMessage('');
+        return;
+      }
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        // Store reference to original image so it persists
+        originalImageRef.current = img;
+        setImage(img);
+        setImageDimensions({ width: img.width, height: img.height });
+        drawOriginal(img);
+        setIsProcessing(false);
+        setProcessingMessage('');
+      };
+      img.onerror = () => {
+        alert('Failed to load image. Please try a different file.');
+        setIsProcessing(false);
+        setProcessingMessage('');
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => {
+      alert('Failed to read image file.');
+      setIsProcessing(false);
+      setProcessingMessage('');
+    };
+    reader.readAsDataURL(fileToProcess);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    const fileName = file.name.toLowerCase();
+    // Accept image files including HEIC and TIFF (which may not have proper MIME type)
+    if (file && (
+      file.type.startsWith('image/') ||
+      fileName.endsWith('.heic') ||
+      fileName.endsWith('.heif') ||
+      fileName.endsWith('.tiff') ||
+      fileName.endsWith('.tif')
+    )) {
+      processImageFile(file);
+    }
+  };
+
+  const drawOriginal = (img: HTMLImageElement) => {
     const canvas = originalCanvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     canvas.width = img.width;
     canvas.height = img.height;
     ctx.drawImage(img, 0, 0);
@@ -62,43 +276,54 @@ const DStretch = () => {
   useEffect(() => {
     if (image) {
       applyFilter();
-      drawZoneOverlay();
+      calculateHistogram();
     }
-  }, [image, filter, brightness, contrast, saturation, dehaze, clarity, shadowRecovery, highlightRecovery, adaptiveEnhancement, maskMode, maskThreshold, zones, zonedMode]);
+  }, [image, filter, brightness, contrast, saturation, dehaze, clarity, shadowRecovery, highlightRecovery, adaptiveEnhancement, showOriginal, noiseReduction, noiseAlgorithm, sharpening, sharpenAlgorithm]);
+
+  const calculateHistogram = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+
+    const r = new Array(256).fill(0);
+    const g = new Array(256).fill(0);
+    const b = new Array(256).fill(0);
+
+    for (let i = 0; i < data.length; i += 4) {
+      r[data[i]]++;
+      g[data[i + 1]]++;
+      b[data[i + 2]]++;
+    }
+
+    setHistogram({ r, g, b });
+  };
 
   const applyFilter = () => {
     if (!image) return;
 
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
-    const origCanvas = originalCanvasRef.current;
-    const origCtx = origCanvas.getContext('2d');
+    if (!ctx) return;
 
     canvas.width = image.width;
     canvas.height = image.height;
 
+    // If showing original, just display the original image
+    if (showOriginal && originalImageRef.current) {
+      ctx.drawImage(originalImageRef.current, 0, 0);
+      return;
+    }
+
     ctx.drawImage(image, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
-
-    // Create mask for problematic areas (too dark, too bright, or vegetation)
-    const mask = new Uint8Array(data.length / 4);
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      const idx = i / 4;
-
-      const luminance = (r * 0.299 + g * 0.587 + b * 0.114);
-      const greenness = g - (r + b) / 2; // Detect vegetation
-
-      // Mark pixels as good (255) or bad (0) based on thresholds
-      const tooDark = luminance < maskThreshold * 0.5;
-      const tooBright = luminance > (255 - maskThreshold * 0.5);
-      const isVegetation = greenness > 20 && g > 80;
-
-      mask[idx] = (tooDark || tooBright || isVegetation) ? 0 : 255;
-    }
 
     // Apply shadow and highlight recovery first
     if (shadowRecovery > 0 || highlightRecovery > 0) {
@@ -132,21 +357,17 @@ const DStretch = () => {
       for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
           const idx = (y * width + x) * 4;
-          const maskIdx = y * width + x;
 
-          // Only apply clarity to good areas
-          if (!maskMode || mask[maskIdx] > 128) {
-            for (let c = 0; c < 3; c++) {
-              const center = tempData[idx + c];
-              const top = tempData[((y - 1) * width + x) * 4 + c];
-              const bottom = tempData[((y + 1) * width + x) * 4 + c];
-              const left = tempData[(y * width + (x - 1)) * 4 + c];
-              const right = tempData[(y * width + (x + 1)) * 4 + c];
+          for (let c = 0; c < 3; c++) {
+            const center = tempData[idx + c];
+            const top = tempData[((y - 1) * width + x) * 4 + c];
+            const bottom = tempData[((y + 1) * width + x) * 4 + c];
+            const left = tempData[(y * width + (x - 1)) * 4 + c];
+            const right = tempData[(y * width + (x + 1)) * 4 + c];
 
-              const edge = center * 5 - top - bottom - left - right;
-              const clarityAmount = clarity / 100;
-              data[idx + c] = Math.min(255, Math.max(0, center + edge * clarityAmount * 0.3));
-            }
+            const edge = center * 5 - top - bottom - left - right;
+            const clarityAmount = clarity / 100;
+            data[idx + c] = Math.min(255, Math.max(0, center + edge * clarityAmount * 0.3));
           }
         }
       }
@@ -154,30 +375,12 @@ const DStretch = () => {
 
     // Apply selected filter
     for (let i = 0; i < data.length; i += 4) {
-      const idx = i / 4;
-      const x = idx % canvas.width;
-      const y = Math.floor(idx / canvas.width);
-
-      // Check if pixel is in any zone
-      let zoneFilter = filter;
-      let applyToPixel = !maskMode || mask[idx] > 128;
-
-      if (zonedMode && zones.length > 0) {
-        for (const zone of zones) {
-          if (x >= zone.x && x <= zone.x + zone.width &&
-              y >= zone.y && y <= zone.y + zone.height) {
-            zoneFilter = zone.filter;
-            break;
-          }
-        }
-      }
-
       let r = data[i];
       let g = data[i + 1];
       let b = data[i + 2];
 
       // Adaptive DStretch mode
-      if (zoneFilter === 'adaptive' && applyToPixel) {
+      if (filter === 'adaptive') {
         const luminance = (r * 0.299 + g * 0.587 + b * 0.114);
         const greenness = g - (r + b) / 2;
 
@@ -201,9 +404,7 @@ const DStretch = () => {
         continue;
       }
 
-      if (!applyToPixel) continue;
-
-      switch (zoneFilter) {
+      switch (filter) {
         case 'yre':
           // Yellow-Red Enhancement
           data[i] = Math.min(255, r * 1.3);
@@ -261,6 +462,79 @@ const DStretch = () => {
           data[i + 1] = Math.min(255, Math.max(0, 255 - lInv));
           data[i + 2] = Math.min(255, Math.max(0, 255 - (lInv - bInv)));
           break;
+        case 'lrd':
+          // Long Red Deep - milder red enhancement
+          data[i] = Math.min(255, r * 1.35);
+          data[i + 1] = g * 0.6;
+          data[i + 2] = b * 0.4;
+          break;
+        case 'yds':
+          // Yellow Deep Stretch - yellow/green enhancement
+          data[i] = Math.min(255, r * 1.1);
+          data[i + 1] = Math.min(255, g * 1.3);
+          data[i + 2] = b * 0.7;
+          break;
+        case 'ybk':
+          // Yellow-Black - dark pigment boost
+          const lumYbk = (r + g + b) / 3;
+          if (lumYbk < 100) {
+            data[i] = Math.min(255, r * 1.2);
+            data[i + 1] = Math.min(255, g * 1.1);
+            data[i + 2] = Math.min(255, b * 1.4);
+          } else {
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+          }
+          break;
+        case 'lbk':
+          // Long Black - enhanced dark with blue tones
+          const lumLbk = (r + g + b) / 3;
+          if (lumLbk < 120) {
+            data[i] = Math.min(255, r * 1.15);
+            data[i + 1] = Math.min(255, g * 1.1);
+            data[i + 2] = Math.min(255, b * 1.5);
+          } else {
+            data[i] = r * 0.9;
+            data[i + 1] = g * 0.9;
+            data[i + 2] = Math.min(255, b * 1.1);
+          }
+          break;
+        case 'yye':
+          // Yellow-Yellow Enhancement
+          data[i] = Math.min(255, r * 1.2);
+          data[i + 1] = Math.min(255, g * 1.4);
+          data[i + 2] = b * 0.6;
+          break;
+        case 'lye':
+          // Long Yellow Enhancement - refined yellow/white
+          data[i] = Math.min(255, r * 1.15);
+          data[i + 1] = Math.min(255, g * 1.35);
+          data[i + 2] = b * 0.65;
+          break;
+        case 'ywe':
+          // Yellow-White Enhancement
+          const avgYwe = (r + g + b) / 3;
+          if (avgYwe > 150) {
+            data[i] = Math.min(255, r * 1.1);
+            data[i + 1] = Math.min(255, g * 1.15);
+            data[i + 2] = Math.min(255, b * 0.95);
+          } else {
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+          }
+          break;
+        case 'rgb0':
+          // RGB Zero - high contrast
+          const avgRgb0 = (r + g + b) / 3;
+          const rDiff = r - avgRgb0;
+          const gDiff = g - avgRgb0;
+          const bDiff = b - avgRgb0;
+          data[i] = Math.min(255, Math.max(0, avgRgb0 + rDiff * 2.5));
+          data[i + 1] = Math.min(255, Math.max(0, avgRgb0 + gDiff * 2.5));
+          data[i + 2] = Math.min(255, Math.max(0, avgRgb0 + bDiff * 2.5));
+          break;
       }
 
       // Apply brightness, contrast, saturation
@@ -284,117 +558,27 @@ const DStretch = () => {
         data[i + 1] = Math.min(255, data[i + 1] * dehazeFactor);
         data[i + 2] = Math.min(255, data[i + 2] * dehazeFactor);
       }
+    }
 
-      // Visualize mask if in mask mode
-      if (maskMode) {
-        const idx = i / 4;
-        if (mask[idx] < 128) {
-          // Overlay red tint on masked areas
-          data[i] = Math.min(255, data[i] * 0.7 + 80);
-          data[i + 1] = data[i + 1] * 0.5;
-          data[i + 2] = data[i + 2] * 0.5;
-        }
-      }
+    // Apply noise reduction
+    if (noiseReduction > 0) {
+      applyNoiseReduction(data, canvas.width, canvas.height, noiseAlgorithm, noiseReduction);
+    }
+
+    // Apply sharpening
+    if (sharpening > 0) {
+      applySharpening(data, canvas.width, canvas.height, sharpenAlgorithm, sharpening);
     }
 
     ctx.putImageData(imageData, 0, 0);
   };
 
-  const drawZoneOverlay = () => {
-    if (!zonedMode || !image) return;
 
-    const canvas = overlayCanvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const mainCanvas = canvasRef.current;
-
-    canvas.width = mainCanvas.width;
-    canvas.height = mainCanvas.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw existing zones
-    zones.forEach((zone, index) => {
-      ctx.strokeStyle = '#00ff00';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
-
-      ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
-      ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
-
-      ctx.fillStyle = '#00ff00';
-      ctx.font = '14px sans-serif';
-      ctx.fillText(`Zone ${index + 1}: ${filters[zone.filter]}`, zone.x + 5, zone.y + 20);
-    });
-
-    // Draw current zone being created
-    if (currentZone) {
-      ctx.strokeStyle = '#ffff00';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.strokeRect(currentZone.x, currentZone.y, currentZone.width, currentZone.height);
-      ctx.setLineDash([]);
-    }
-  };
-
-  const handleCanvasMouseDown = (e) => {
-    if (!zonedMode) return;
-
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    setCurrentZone({ x, y, width: 0, height: 0, filter: filter });
-    setIsDrawing(true);
-  };
-
-  const handleCanvasMouseMove = (e) => {
-    if (!zonedMode || !isDrawing || !currentZone) return;
-
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
-    setCurrentZone({
-      ...currentZone,
-      width: x - currentZone.x,
-      height: y - currentZone.y
-    });
-    drawZoneOverlay();
-  };
-
-  const handleCanvasMouseUp = () => {
-    if (!zonedMode || !isDrawing || !currentZone) return;
-
-    if (Math.abs(currentZone.width) > 10 && Math.abs(currentZone.height) > 10) {
-      // Normalize negative dimensions
-      const zone = {
-        x: currentZone.width < 0 ? currentZone.x + currentZone.width : currentZone.x,
-        y: currentZone.height < 0 ? currentZone.y + currentZone.height : currentZone.y,
-        width: Math.abs(currentZone.width),
-        height: Math.abs(currentZone.height),
-        filter: currentZone.filter
-      };
-      setZones([...zones, zone]);
-    }
-
-    setCurrentZone(null);
-    setIsDrawing(false);
-  };
-
-  const clearZones = () => {
-    setZones([]);
-    setCurrentZone(null);
-  };
-
-  const rgbToHsl = (r, g, b) => {
+  const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => {
     r /= 255; g /= 255; b /= 255;
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    let h, s, l = (max + min) / 2;
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
 
     if (max === min) {
       h = s = 0;
@@ -410,12 +594,12 @@ const DStretch = () => {
     return [h, s, l];
   };
 
-  const hslToRgb = (h, s, l) => {
+  const hslToRgb = (h: number, s: number, l: number): [number, number, number] => {
     let r, g, b;
     if (s === 0) {
       r = g = b = l;
     } else {
-      const hue2rgb = (p, q, t) => {
+      const hue2rgb = (p: number, q: number, t: number): number => {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
         if (t < 1/6) return p + (q - p) * 6 * t;
@@ -434,10 +618,154 @@ const DStretch = () => {
 
   const downloadImage = () => {
     const canvas = canvasRef.current;
-    const link = document.createElement('a');
-    link.download = `dstretch-${filter}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
+    if (!canvas) return;
+
+    setIsDownloading(true);
+
+    try {
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      // Always save as PNG for lossless quality preservation (required for scientific/archaeological analysis)
+      link.download = `dstretch-${filter}-${timestamp}.png`;
+      link.href = canvas.toDataURL('image/png', 1.0);
+      link.click();
+
+      setTimeout(() => {
+        setIsDownloading(false);
+      }, 500);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download image.');
+      setIsDownloading(false);
+    }
+  };
+
+  const applyLightingPreset = (presetKey: string) => {
+    setLightingPreset(presetKey);
+    const preset = lightingPresets[presetKey as keyof typeof lightingPresets];
+    if (preset) {
+      setBrightness(preset.settings.brightness);
+      setContrast(preset.settings.contrast);
+      setSaturation(preset.settings.saturation);
+      setShadowRecovery(preset.settings.shadowRecovery);
+      setHighlightRecovery(preset.settings.highlightRecovery);
+      setClarity(preset.settings.clarity);
+      setDehaze(preset.settings.dehaze);
+    }
+  };
+
+  const applyNoiseReduction = (data: Uint8ClampedArray, width: number, height: number, algorithm: string, strength: number) => {
+    if (strength === 0) return;
+
+    const tempData = new Uint8ClampedArray(data);
+    const radius = Math.max(1, Math.floor(strength / 25));
+
+    for (let y = radius; y < height - radius; y++) {
+      for (let x = radius; x < width - radius; x++) {
+        const idx = (y * width + x) * 4;
+
+        for (let c = 0; c < 3; c++) {
+          if (algorithm === 'median') {
+            // Median filter - best for salt-and-pepper noise
+            const values: number[] = [];
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dx = -radius; dx <= radius; dx++) {
+                const nIdx = ((y + dy) * width + (x + dx)) * 4 + c;
+                values.push(tempData[nIdx]);
+              }
+            }
+            values.sort((a, b) => a - b);
+            data[idx + c] = values[Math.floor(values.length / 2)];
+          } else if (algorithm === 'gaussian') {
+            // Gaussian blur - smooth noise reduction
+            let sum = 0;
+            let weightSum = 0;
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dx = -radius; dx <= radius; dx++) {
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const weight = Math.exp(-(dist * dist) / (2 * radius * radius));
+                const nIdx = ((y + dy) * width + (x + dx)) * 4 + c;
+                sum += tempData[nIdx] * weight;
+                weightSum += weight;
+              }
+            }
+            const blurred = sum / weightSum;
+            const original = tempData[idx + c];
+            data[idx + c] = original + (blurred - original) * (strength / 100);
+          } else if (algorithm === 'bilateral') {
+            // Bilateral filter - edge-preserving noise reduction
+            let sum = 0;
+            let weightSum = 0;
+            const centerVal = tempData[idx + c];
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dx = -radius; dx <= radius; dx++) {
+                const nIdx = ((y + dy) * width + (x + dx)) * 4 + c;
+                const val = tempData[nIdx];
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const spatialWeight = Math.exp(-(dist * dist) / (2 * radius * radius));
+                const colorDiff = Math.abs(val - centerVal);
+                const rangeWeight = Math.exp(-(colorDiff * colorDiff) / (2 * 50 * 50));
+                const weight = spatialWeight * rangeWeight;
+                sum += val * weight;
+                weightSum += weight;
+              }
+            }
+            const filtered = sum / weightSum;
+            const original = tempData[idx + c];
+            data[idx + c] = original + (filtered - original) * (strength / 100);
+          }
+        }
+      }
+    }
+  };
+
+  const applySharpening = (data: Uint8ClampedArray, width: number, height: number, algorithm: string, strength: number) => {
+    if (strength === 0) return;
+
+    const tempData = new Uint8ClampedArray(data);
+    const amount = strength / 100;
+
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = (y * width + x) * 4;
+
+        for (let c = 0; c < 3; c++) {
+          if (algorithm === 'unsharp') {
+            // Unsharp mask - standard sharpening
+            const center = tempData[idx + c];
+            const top = tempData[((y - 1) * width + x) * 4 + c];
+            const bottom = tempData[((y + 1) * width + x) * 4 + c];
+            const left = tempData[(y * width + (x - 1)) * 4 + c];
+            const right = tempData[(y * width + (x + 1)) * 4 + c];
+            const blur = (top + bottom + left + right + center) / 5;
+            const sharpened = center + (center - blur) * amount;
+            data[idx + c] = Math.min(255, Math.max(0, sharpened));
+          } else if (algorithm === 'highpass') {
+            // High-pass filter - aggressive sharpening
+            const center = tempData[idx + c];
+            const top = tempData[((y - 1) * width + x) * 4 + c];
+            const bottom = tempData[((y + 1) * width + x) * 4 + c];
+            const left = tempData[(y * width + (x - 1)) * 4 + c];
+            const right = tempData[(y * width + (x + 1)) * 4 + c];
+            const highpass = center * 5 - top - bottom - left - right;
+            data[idx + c] = Math.min(255, Math.max(0, center + highpass * amount * 0.5));
+          } else if (algorithm === 'laplacian') {
+            // Laplacian - edge enhancement
+            const center = tempData[idx + c];
+            const top = tempData[((y - 1) * width + x) * 4 + c];
+            const bottom = tempData[((y + 1) * width + x) * 4 + c];
+            const left = tempData[(y * width + (x - 1)) * 4 + c];
+            const right = tempData[(y * width + (x + 1)) * 4 + c];
+            const topLeft = tempData[((y - 1) * width + (x - 1)) * 4 + c];
+            const topRight = tempData[((y - 1) * width + (x + 1)) * 4 + c];
+            const bottomLeft = tempData[((y + 1) * width + (x - 1)) * 4 + c];
+            const bottomRight = tempData[((y + 1) * width + (x + 1)) * 4 + c];
+            const laplacian = center * 9 - top - bottom - left - right - topLeft - topRight - bottomLeft - bottomRight;
+            data[idx + c] = Math.min(255, Math.max(0, center + laplacian * amount * 0.2));
+          }
+        }
+      }
+    }
   };
 
   const resetSettings = () => {
@@ -449,261 +777,397 @@ const DStretch = () => {
     setShadowRecovery(0);
     setHighlightRecovery(0);
     setAdaptiveEnhancement(false);
-    setMaskMode(false);
-    setMaskThreshold(50);
-    setZonedMode(false);
-    setZones([]);
-    setCurrentZone(null);
+    setNoiseReduction(0);
+    setSharpening(0);
     setFilter('none');
+    setLightingPreset('none');
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">DStretch Image Enhancement</h1>
-          <p className="text-gray-400">Upload rock art images and apply color filters to reveal hidden details</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Controls */}
-          <div className="bg-gray-800 rounded-lg p-6 space-y-6">
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Top Header */}
+      <div className="bg-gray-950 border-b border-gray-800 px-3 md:px-6 py-3">
+        <div className="flex items-center justify-between gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden bg-gray-800 hover:bg-gray-700 p-2 rounded"
+              title="Toggle sidebar"
+            >
+              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
             <div>
-              <label className="flex items-center justify-center w-full px-4 py-8 bg-gray-700 rounded-lg border-2 border-dashed border-gray-600 hover:border-blue-500 cursor-pointer transition">
-                <div className="text-center">
-                  <Upload className="mx-auto mb-2" size={32} />
-                  <span className="text-sm">Upload Image</span>
+              <h1 className="text-lg md:text-xl font-bold">DStretch</h1>
+              <p className="text-xs text-gray-500 hidden sm:block">Rock Art Enhancement</p>
+            </div>
+
+            {/* Histogram Display */}
+            {histogram && image && (
+              <div className="hidden lg:block bg-gray-900 rounded p-2 border border-gray-700" title="RGB Histogram: Shows distribution of red, green, and blue tones. Peaks on left = dark pixels, right = bright pixels. Use to check if colors are clipping or if image needs adjustment.">
+                <div className="flex items-end gap-px h-12 w-64">
+                  {Array.from({ length: 64 }).map((_, i) => {
+                    const binSize = 4;
+                    const rVal = histogram.r.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
+                    const gVal = histogram.g.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
+                    const bVal = histogram.b.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
+                    const max = Math.max(...histogram.r, ...histogram.g, ...histogram.b);
+                    return (
+                      <div key={i} className="flex-1 flex flex-col justify-end items-center gap-px">
+                        <div className="w-full bg-red-500 opacity-50" style={{ height: `${(rVal / max) * 100}%` }}></div>
+                        <div className="w-full bg-green-500 opacity-50" style={{ height: `${(gVal / max) * 100}%` }}></div>
+                        <div className="w-full bg-blue-500 opacity-50" style={{ height: `${(bVal / max) * 100}%` }}></div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-              </label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Filter Type</label>
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="w-full bg-gray-700 rounded px-3 py-2 text-sm"
-              >
-                {Object.entries(filters).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
-              {zonedMode && (
-                <p className="text-xs text-yellow-400 mt-1">
-                  Selected filter will apply to new zones
-                </p>
-              )}
-            </div>
-
-            <div className="bg-gray-700 rounded p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Zoned DStretch</label>
-                <button
-                  onClick={() => {
-                    setZonedMode(!zonedMode);
-                    if (zonedMode) clearZones();
-                  }}
-                  className={`px-3 py-1 rounded text-xs ${zonedMode ? 'bg-green-600' : 'bg-gray-600'}`}
-                >
-                  {zonedMode ? 'ON' : 'OFF'}
-                </button>
               </div>
-              <p className="text-xs text-gray-400">
-                {zonedMode ? 'Draw rectangles to apply different filters per zone' : 'Apply different filters to specific areas'}
-              </p>
-              {zonedMode && zones.length > 0 && (
-                <button
-                  onClick={clearZones}
-                  className="w-full bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs flex items-center justify-center gap-1"
-                >
-                  <Trash2 size={12} />
-                  Clear All Zones ({zones.length})
-                </button>
-              )}
-            </div>
-
-            <div className="bg-gray-700 rounded p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Smart Masking</label>
-                <button
-                  onClick={() => setMaskMode(!maskMode)}
-                  className={`px-3 py-1 rounded text-xs ${maskMode ? 'bg-blue-600' : 'bg-gray-600'}`}
-                >
-                  {maskMode ? 'ON' : 'OFF'}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400">
-                {maskMode ? 'Red overlay shows excluded areas' : 'Ignores shadows, highlights & vegetation'}
-              </p>
-              {maskMode && (
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">
-                    Mask Sensitivity: {maskThreshold}
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={maskThreshold}
-                    onChange={(e) => setMaskThreshold(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Shadow Recovery: {shadowRecovery}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={shadowRecovery}
-                onChange={(e) => setShadowRecovery(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Highlight Recovery: {highlightRecovery}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={highlightRecovery}
-                onChange={(e) => setHighlightRecovery(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Brightness: {brightness}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={brightness}
-                onChange={(e) => setBrightness(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Contrast: {contrast}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={contrast}
-                onChange={(e) => setContrast(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Saturation: {saturation}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                value={saturation}
-                onChange={(e) => setSaturation(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Dehaze: {dehaze}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={dehaze}
-                onChange={(e) => setDehaze(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Clarity: {clarity}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={clarity}
-                onChange={(e) => setClarity(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={resetSettings}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded flex items-center justify-center gap-2"
-              >
-                <RotateCcw size={16} />
-                Reset
-              </button>
-              <button
-                onClick={downloadImage}
-                disabled={!image}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed px-4 py-2 rounded flex items-center justify-center gap-2"
-              >
-                <Download size={16} />
-                Download
-              </button>
-            </div>
+            )}
           </div>
 
-          {/* Canvas Display */}
-          <div className="lg:col-span-2 bg-gray-800 rounded-lg p-6">
-            <div className="flex items-center justify-center min-h-[500px]">
-              {!image ? (
-                <div className="text-center text-gray-500">
-                  <Sliders size={48} className="mx-auto mb-4 opacity-50" />
-                  <p>Upload an image to begin enhancement</p>
-                </div>
-              ) : (
-                <div className="w-full overflow-auto">
-                  <div className="relative inline-block">
-                    <canvas
-                      ref={canvasRef}
-                      onMouseDown={handleCanvasMouseDown}
-                      onMouseMove={handleCanvasMouseMove}
-                      onMouseUp={handleCanvasMouseUp}
-                      onMouseLeave={handleCanvasMouseUp}
-                      className={`max-w-full h-auto mx-auto border border-gray-700 rounded ${zonedMode ? 'cursor-crosshair' : ''}`}
+          <div className="flex gap-1 md:gap-2">
+            <button
+              onClick={() => setShowOriginal(!showOriginal)}
+              disabled={!image}
+              className={`${showOriginal ? 'bg-green-600' : 'bg-gray-800'} hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2`}
+              title="Toggle between original and edited view. Click repeatedly to compare changes."
+            >
+              <Eye size={14} />
+              <span className="hidden sm:inline">{showOriginal ? 'Edited' : 'Original'}</span>
+            </button>
+            <button
+              onClick={resetSettings}
+              className="bg-gray-800 hover:bg-gray-700 px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
+              title="Reset all filters and adjustments to default values"
+            >
+              <RotateCcw size={14} />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+            <button
+              onClick={downloadImage}
+              disabled={!image || isDownloading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
+              title="Save as lossless PNG. All edits preserved at full quality for scientific analysis."
+            >
+              <Download size={14} className={isDownloading ? 'animate-bounce' : ''} />
+              <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : 'Download PNG'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-65px)] overflow-hidden relative">
+        {/* Sidebar Controls */}
+        <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-20 w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden h-full transition-transform duration-300`}>
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-2.5 md:p-3 space-y-2">
+              {/* Upload Section */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`flex items-center justify-center w-full px-3 py-4 bg-gray-700 rounded-lg border-2 border-dashed cursor-pointer transition ${
+                  isDragging ? 'border-blue-400 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500'
+                }`}
+              >
+                <label className="cursor-pointer text-center w-full">
+                  <Upload className="mx-auto mb-1.5" size={20} />
+                  <span className="text-[11px] block">{isDragging ? 'Drop image here' : 'Upload or Drop Image'}</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/tiff,image/tif,image/heic,image/heif,image/webp,.png,.jpg,.jpeg,.tiff,.tif,.heic,.heif"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    title="Accepts PNG, JPEG, TIFF, HEIC/HEIF, WebP. All edits saved as lossless PNG."
+                  />
+                </label>
+              </div>
+
+              {/* Lighting Presets */}
+              <div className="border-t border-gray-700 pt-2">
+                <label className="block text-[10px] font-medium mb-1 text-gray-400 uppercase tracking-wide" title="Auto-adjust settings based on shooting conditions. Fixes common problems like harsh shadows or flat lighting.">
+                  Lighting Conditions
+                </label>
+                <select
+                  value={lightingPreset}
+                  onChange={(e) => applyLightingPreset(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 text-gray-200 rounded px-2 py-1.5 text-xs focus:outline-none focus:border-blue-500"
+                  title="Select the lighting conditions when photo was taken"
+                >
+                  {Object.entries(lightingPresets).map(([key, preset]) => (
+                    <option key={key} value={key}>
+                      {preset.name}
+                    </option>
+                  ))}
+                </select>
+                {lightingPreset !== 'none' && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {lightingPresets[lightingPreset as keyof typeof lightingPresets].desc}
+                  </p>
+                )}
+              </div>
+
+              {/* Filters Section */}
+              <div className="space-y-1.5">
+                {Object.entries(filterGroups).map(([groupKey, group]) => (
+                  <div key={groupKey}>
+                    <label className="block text-[10px] font-medium mb-1 text-gray-400 uppercase tracking-wide">
+                      {group.title}
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(group.filters).map(([key, filterInfo]) => (
+                        <button
+                          key={key}
+                          onClick={() => setFilter(key)}
+                          title={filterInfo.desc}
+                          className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
+                            filter === key
+                              ? 'bg-blue-600 text-white shadow-lg'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {filterInfo.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Basic Adjustments */}
+              <div className="border-t border-gray-700 pt-2">
+                <label className="block text-[10px] font-medium mb-1.5 text-gray-400 uppercase tracking-wide">Basic</label>
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Adjusts overall image lightness. Increase for dark photos, decrease for overexposed images.">
+                      <span>Brightness</span>
+                      <span className="text-gray-400">{brightness}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={brightness}
+                      onChange={(e) => setBrightness(Number(e.target.value))}
+                      className="w-full"
+                      title="Adjusts overall image lightness"
                     />
-                    <canvas
-                      ref={overlayCanvasRef}
-                      className="absolute top-0 left-0 pointer-events-none"
-                      style={{ width: '100%', height: '100%' }}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Difference between light and dark areas. Increase to make pigments pop against rock surface.">
+                      <span>Contrast</span>
+                      <span className="text-gray-400">{contrast}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={contrast}
+                      onChange={(e) => setContrast(Number(e.target.value))}
+                      className="w-full"
+                      title="Difference between light and dark areas"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Color intensity. Increase to make pigment colors more vivid. Decrease for subtle, natural look.">
+                      <span>Saturation</span>
+                      <span className="text-gray-400">{saturation}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="200"
+                      value={saturation}
+                      onChange={(e) => setSaturation(Number(e.target.value))}
+                      className="w-full"
+                      title="Color intensity"
                     />
                   </div>
                 </div>
-              )}
+              </div>
+
+              {/* Enhancement Tools */}
+              <div className="border-t border-gray-700 pt-2">
+                <label className="block text-[10px] font-medium mb-1.5 text-gray-400 uppercase tracking-wide">Enhancement</label>
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Brightens dark shadowed areas without affecting the rest. Reveals pigments in cave entrances or overhangs.">
+                      <span>Shadow Recovery</span>
+                      <span className="text-gray-400">{shadowRecovery}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={shadowRecovery}
+                      onChange={(e) => setShadowRecovery(Number(e.target.value))}
+                      className="w-full"
+                      title="Brightens dark shadowed areas"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Darkens bright overexposed areas. Recovers detail in sunlit patches or reflective surfaces.">
+                      <span>Highlight Recovery</span>
+                      <span className="text-gray-400">{highlightRecovery}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={highlightRecovery}
+                      onChange={(e) => setHighlightRecovery(Number(e.target.value))}
+                      className="w-full"
+                      title="Darkens bright overexposed areas"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Sharpens edges and textures. Makes faint lines and boundaries more visible. Use carefully - can create noise at high values.">
+                      <span>Clarity</span>
+                      <span className="text-gray-400">{clarity}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={clarity}
+                      onChange={(e) => setClarity(Number(e.target.value))}
+                      className="w-full"
+                      title="Sharpens edges and textures"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Cuts through haze and atmospheric effects. Boosts contrast in low-light conditions. Useful for outdoor photos with dust or moisture in the air.">
+                      <span>Dehaze</span>
+                      <span className="text-gray-400">{dehaze}%</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={dehaze}
+                      onChange={(e) => setDehaze(Number(e.target.value))}
+                      className="w-full"
+                      title="Cuts through haze and atmospheric effects"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-xs font-medium text-gray-300" title="Reduces image noise and grain. Median: best for salt-and-pepper noise. Gaussian: smooth reduction. Bilateral: edge-preserving.">
+                        Noise Reduction <span className="text-gray-400">{noiseReduction}%</span>
+                      </label>
+                      <select
+                        value={noiseAlgorithm}
+                        onChange={(e) => setNoiseAlgorithm(e.target.value as 'median' | 'gaussian' | 'bilateral')}
+                        className="bg-gray-700 border border-gray-600 text-gray-200 rounded px-1.5 py-0.5 text-[10px]"
+                        title="Noise reduction algorithm"
+                      >
+                        <option value="median">Median</option>
+                        <option value="gaussian">Gaussian</option>
+                        <option value="bilateral">Bilateral</option>
+                      </select>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={noiseReduction}
+                      onChange={(e) => setNoiseReduction(Number(e.target.value))}
+                      className="w-full"
+                      title="Reduces image noise and grain"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-xs font-medium text-gray-300" title="Enhances edge definition and detail. Unsharp: standard sharpening. Highpass: aggressive. Laplacian: edge enhancement.">
+                        Sharpening <span className="text-gray-400">{sharpening}%</span>
+                      </label>
+                      <select
+                        value={sharpenAlgorithm}
+                        onChange={(e) => setSharpenAlgorithm(e.target.value as 'unsharp' | 'highpass' | 'laplacian')}
+                        className="bg-gray-700 border border-gray-600 text-gray-200 rounded px-1.5 py-0.5 text-[10px]"
+                        title="Sharpening algorithm"
+                      >
+                        <option value="unsharp">Unsharp</option>
+                        <option value="highpass">Highpass</option>
+                        <option value="laplacian">Laplacian</option>
+                      </select>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={sharpening}
+                      onChange={(e) => setSharpening(Number(e.target.value))}
+                      className="w-full"
+                      title="Enhances edge definition and detail"
+                    />
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
 
-        {/* Hidden original canvas */}
-        <canvas ref={originalCanvasRef} className="hidden" />
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Loading Overlay */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
+            <div className="bg-gray-800 rounded-lg p-8 flex flex-col items-center gap-4 border border-gray-700">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <p className="text-white text-lg">{processingMessage}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Main Canvas Area */}
+        <div className="flex-1 bg-gray-900 flex flex-col overflow-hidden">
+          {imageDimensions && (
+            <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 text-xs text-gray-400 flex items-center justify-between">
+              <span>Image: {imageDimensions.width} × {imageDimensions.height} px</span>
+              <span className="text-green-400">✓ Original size preserved</span>
+            </div>
+          )}
+
+          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+            {!image ? (
+              <div className="text-center text-gray-500">
+                <Upload size={64} className="mx-auto mb-4 opacity-30" />
+                <p className="text-lg mb-2">Upload an image to begin</p>
+                <p className="text-sm text-gray-600">Drag and drop or use the upload button</p>
+              </div>
+            ) : (
+              <div className="relative max-w-full max-h-full flex items-center justify-center">
+                <canvas
+                  ref={canvasRef}
+                  className="border border-gray-700 shadow-2xl"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 'calc(100vh - 120px)',
+                    objectFit: 'contain'
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Hidden original canvas */}
+      <canvas ref={originalCanvasRef} className="hidden" />
     </div>
   );
 };
