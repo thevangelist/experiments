@@ -1,129 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Experiments</title>
-    <meta name="description" content="A collection of experimental projects and prototypes">
+    <meta
+      name="description"
+      content="A collection of experimental projects and prototypes"
+    />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'cyan-bright': '#00d4ff',
-                        'purple-deep': '#7b2cbf',
-                        'purple-light': '#c77dff',
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "cyan-bright": "#00d4ff",
+              "purple-deep": "#7b2cbf",
+              "purple-light": "#c77dff",
+            },
+          },
+        },
+      };
     </script>
     <style>
-        .gradient-text {
-            background: linear-gradient(135deg, #00d4ff, #c77dff, #7b2cbf);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: gradient-shift 8s ease infinite;
-        }
+      .gradient-text {
+        background: linear-gradient(135deg, #00d4ff, #c77dff, #7b2cbf);
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: gradient-shift 8s ease infinite;
+      }
 
-        @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+      @keyframes gradient-shift {
+        0%,
+        100% {
+          background-position: 0% 50%;
         }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
 
-        .grid-bg {
-            background-image:
-                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-        }
+      .grid-bg {
+        background-image: linear-gradient(
+            rgba(0, 212, 255, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+      }
     </style>
-</head>
-<body class="min-h-screen bg-black text-gray-300 grid-bg">
+  </head>
+  <body class="min-h-screen bg-black text-gray-300 grid-bg">
     <!-- Nav -->
     <nav class="border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <h1 class="text-2xl font-bold gradient-text">EXPERIMENTS</h1>
-            <div class="flex gap-6 text-sm text-gray-400">
-                <a href="https://github.com/thevangelist/experiments" target="_blank"
-                   class="hover:text-cyan-bright transition-colors">GitHub</a>
-                <a href="https://github.com/thevangelist/experiments#readme" target="_blank"
-                   class="hover:text-cyan-bright transition-colors">Docs</a>
-            </div>
+      <div
+        class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between"
+      >
+        <h1 class="text-2xl font-bold gradient-text">EXPERIMENTS</h1>
+        <div class="flex gap-6 text-sm text-gray-400">
+          <a
+            href="https://github.com/thevangelist/experiments"
+            target="_blank"
+            class="hover:text-cyan-bright transition-colors"
+            >GitHub</a
+          >
+          <a
+            href="https://github.com/thevangelist/experiments#readme"
+            target="_blank"
+            class="hover:text-cyan-bright transition-colors"
+            >Docs</a
+          >
         </div>
+      </div>
     </nav>
 
     <!-- Hero -->
     <header class="px-6 py-16 border-b border-gray-800">
-        <div class="max-w-7xl mx-auto">
-            <h2 class="text-lg text-gray-400 mb-2">The evangelist's lab</h2>
-            <p class="text-4xl md:text-5xl font-bold text-gray-200 max-w-3xl leading-tight">
-                Experimental projects exploring AI, image processing, and creative technology
-            </p>
-        </div>
+      <div class="max-w-7xl mx-auto">
+        <h2 class="text-lg text-gray-400 mb-2">Thevangelist's lab</h2>
+        <p
+          class="text-4xl md:text-5xl font-bold text-gray-200 max-w-3xl leading-tight"
+        >
+          Experimental projects exploring AI, image processing, and creative
+          technology
+        </p>
+      </div>
     </header>
 
     <!-- Projects Grid -->
     <main class="px-6 py-12">
-        <div class="max-w-7xl mx-auto">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Skynet Project -->
-                <a href="https://github.com/thevangelist/experiments/tree/main/projects/skynet"
-                   class="group block border border-gray-800 hover:border-cyan-bright/50 bg-black/40 transition-all duration-300">
-                    <div class="aspect-video bg-gradient-to-br from-purple-deep/20 to-cyan-bright/10 border-b border-gray-800"></div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold text-gray-200 group-hover:text-cyan-bright transition-colors mb-2">
-                            Skynet AGI
-                        </h3>
-                        <p class="text-sm text-gray-400 mb-4 leading-relaxed">
-                            Self-modifying neural architecture with metacognition, emotional systems, and autonomous reasoning capabilities.
-                        </p>
-                        <div class="flex gap-2 text-xs text-gray-500">
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">AI</span>
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">AGI</span>
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">Neural Network</span>
-                        </div>
-                    </div>
-                </a>
-
-                <!-- DStretch Project -->
-                <a href="https://thevangelist.github.io/experiments/dstretch/"
-                   class="group block border border-gray-800 hover:border-cyan-bright/50 bg-black/40 transition-all duration-300">
-                    <div class="aspect-video bg-gradient-to-br from-cyan-bright/20 to-purple-light/10 border-b border-gray-800"></div>
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-2">
-                            <h3 class="text-xl font-bold text-gray-200 group-hover:text-cyan-bright transition-colors">
-                                DStretch
-                            </h3>
-                            <span class="text-xs text-cyan-bright">LIVE</span>
-                        </div>
-                        <p class="text-sm text-gray-400 mb-4 leading-relaxed">
-                            Archaeological image enhancement tool using advanced color filtering and real-time processing to reveal hidden rock art details.
-                        </p>
-                        <div class="flex gap-2 text-xs text-gray-500">
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">Image Processing</span>
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">React</span>
-                            <span class="px-2 py-1 bg-gray-800/50 rounded">Canvas API</span>
-                        </div>
-                    </div>
-                </a>
+      <div class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- Skynet Project -->
+          <a
+            href="https://github.com/thevangelist/experiments/tree/main/projects/skynet"
+            class="group block border border-gray-800 hover:border-cyan-bright/50 bg-black/40 transition-all duration-300"
+          >
+            <div
+              class="aspect-video bg-gradient-to-br from-purple-deep/20 to-cyan-bright/10 border-b border-gray-800"
+            ></div>
+            <div class="p-6">
+              <h3
+                class="text-xl font-bold text-gray-200 group-hover:text-cyan-bright transition-colors mb-2"
+              >
+                Skynet AGI
+              </h3>
+              <p class="text-sm text-gray-400 mb-4 leading-relaxed">
+                Self-modifying neural architecture with metacognition, emotional
+                systems, and autonomous reasoning capabilities.
+              </p>
+              <div class="flex gap-2 text-xs text-gray-500">
+                <span class="px-2 py-1 bg-gray-800/50 rounded">AI</span>
+                <span class="px-2 py-1 bg-gray-800/50 rounded">AGI</span>
+                <span class="px-2 py-1 bg-gray-800/50 rounded"
+                  >Neural Network</span
+                >
+              </div>
             </div>
+          </a>
+
+          <!-- DStretch Project -->
+          <a
+            href="https://thevangelist.github.io/experiments/dstretch/"
+            class="group block border border-gray-800 hover:border-cyan-bright/50 bg-black/40 transition-all duration-300"
+          >
+            <div
+              class="aspect-video bg-gradient-to-br from-cyan-bright/20 to-purple-light/10 border-b border-gray-800"
+            ></div>
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-2">
+                <h3
+                  class="text-xl font-bold text-gray-200 group-hover:text-cyan-bright transition-colors"
+                >
+                  DStretch
+                </h3>
+                <span class="text-xs text-cyan-bright">LIVE</span>
+              </div>
+              <p class="text-sm text-gray-400 mb-4 leading-relaxed">
+                Archaeological image enhancement tool using advanced color
+                filtering and real-time processing to reveal hidden rock art
+                details.
+              </p>
+              <div class="flex gap-2 text-xs text-gray-500">
+                <span class="px-2 py-1 bg-gray-800/50 rounded"
+                  >Image Processing</span
+                >
+                <span class="px-2 py-1 bg-gray-800/50 rounded">React</span>
+                <span class="px-2 py-1 bg-gray-800/50 rounded">Canvas API</span>
+              </div>
+            </div>
+          </a>
         </div>
+      </div>
     </main>
 
     <!-- Footer -->
     <footer class="px-6 py-12 mt-16 border-t border-gray-800">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-sm text-gray-500">
-            <p>
-                Built by <a href="https://github.com/thevangelist" target="_blank"
-                           class="text-gray-400 hover:text-cyan-bright transition-colors">@thevangelist</a>
-            </p>
-            <a href="https://github.com/thevangelist/experiments/blob/main/LICENSE" target="_blank"
-               class="hover:text-gray-400 transition-colors">MIT License</a>
-        </div>
+      <div
+        class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-sm text-gray-500"
+      >
+        <p>
+          Built by
+          <a
+            href="https://github.com/thevangelist"
+            target="_blank"
+            class="text-gray-400 hover:text-cyan-bright transition-colors"
+            >@thevangelist</a
+          >
+        </p>
+        <a
+          href="https://github.com/thevangelist/experiments/blob/main/LICENSE"
+          target="_blank"
+          class="hover:text-gray-400 transition-colors"
+          >MIT License</a
+        >
+      </div>
     </footer>
-</body>
+  </body>
 </html>
