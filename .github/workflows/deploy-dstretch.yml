@@ -20,9 +20,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./projects/dstretch
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,15 +32,24 @@ jobs:
           cache-dependency-path: './projects/dstretch/package-lock.json'
 
       - name: Install dependencies
+        working-directory: ./projects/dstretch
         run: npm ci
 
       - name: Build
+        working-directory: ./projects/dstretch
         run: npm run build
+
+      - name: Prepare deployment
+        run: |
+          mkdir -p _site
+          cp -r docs/* _site/
+          mkdir -p _site/dstretch
+          cp -r projects/dstretch/dist/* _site/dstretch/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./projects/dstretch/dist
+          path: ./_site
 
   deploy:
     environment:
