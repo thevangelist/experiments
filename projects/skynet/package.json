@@ -1,0 +1,29 @@
+{
+  "name": "@experiments/skynet",
+  "version": "1.0.0",
+  "description": "Skynet AGI - A functional artificial general intelligence system with self-modifying neural architecture",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/skynet-simulator.ts",
+    "start": "node dist/skynet-simulator.js",
+    "clean": "rm -rf dist node_modules"
+  },
+  "keywords": [
+    "ai",
+    "agi",
+    "neural-network",
+    "self-modification",
+    "machine-learning",
+    "consciousness"
+  ],
+  "author": "thevangelist",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  }
+}

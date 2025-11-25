@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiments - Monorepo</title>
+    <meta name="description" content="A collection of experimental projects and prototypes">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyan-bright': '#00d4ff',
+                        'purple-deep': '#7b2cbf',
+                        'purple-light': '#c77dff',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .arrow-transition::after {
+            content: " →";
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        .arrow-transition:hover::after {
+            transform: translateX(5px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-[#0a0a0a] to-[#1a1a2e] text-gray-300">
+    <div class="max-w-7xl mx-auto p-5">
+        <!-- Header -->
+        <header class="text-center py-15 px-5 bg-black/30 backdrop-blur-md rounded-xl mb-10">
+            <h1 class="text-5xl md:text-6xl font-bold mb-2.5 gradient-text">🧪 Experiments</h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-5">A monorepo for experimental projects and prototypes</p>
+            <div class="mt-8 flex flex-col md:flex-row gap-4 justify-center items-center">
+                <a href="https://github.com/thevangelist/experiments" target="_blank"
+                   class="inline-block px-8 py-3 bg-cyan-bright/10 border-2 border-cyan-bright text-cyan-bright rounded-lg font-semibold transition-all hover:bg-cyan-bright hover:text-black hover:-translate-y-0.5 hover:shadow-[0_5px_20px_rgba(0,212,255,0.4)]">
+                    View on GitHub
+                </a>
+                <a href="https://github.com/thevangelist/experiments#readme" target="_blank"
+                   class="inline-block px-8 py-3 bg-cyan-bright/10 border-2 border-cyan-bright text-cyan-bright rounded-lg font-semibold transition-all hover:bg-cyan-bright hover:text-black hover:-translate-y-0.5 hover:shadow-[0_5px_20px_rgba(0,212,255,0.4)]">
+                    Documentation
+                </a>
+            </div>
+        </header>
+
+        <!-- Monorepo Info -->
+        <div class="bg-cyan-bright/5 border-l-4 border-cyan-bright p-5 my-8 rounded-md">
+            <h3 class="text-cyan-bright text-xl font-semibold mb-2.5">About This Monorepo</h3>
+            <p class="text-gray-300 leading-relaxed">
+                This is a collection of experimental projects, prototypes, and proof-of-concepts.
+                Each project lives in its own directory under <code class="bg-black/50 px-2 py-0.5 rounded text-purple-light font-mono text-sm">projects/</code> with independent
+                dependencies and build configurations, managed as npm workspaces.
+            </p>
+        </div>
+
+        <!-- Projects Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+            <!-- Skynet Project -->
+            <div class="bg-black/40 backdrop-blur-md border border-purple-deep/30 rounded-xl p-8 transition-all hover:-translate-y-1 hover:border-purple-deep hover:shadow-[0_10px_30px_rgba(123,44,191,0.3)]">
+                <h2 class="text-cyan-bright text-3xl font-bold mb-4">Skynet AGI</h2>
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">AI</span>
+                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">AGI</span>
+                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Neural Network</span>
+                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Self-Modification</span>
+                </div>
+                <p class="text-gray-400 mb-5 leading-relaxed">
+                    A functional artificial general intelligence system with self-modifying neural architecture.
+                    Features include metacognition, emotional systems, pattern recognition, reasoning chains,
+                    and experimental self-modification capabilities.
+                </p>
+                <p class="text-gray-400 mb-5 leading-relaxed">
+                    Implements multi-layer neural networks with Hebbian learning, attention mechanisms,
+                    memory consolidation, and autonomous goal-directed behavior.
+                </p>
+                <a href="https://github.com/thevangelist/experiments/tree/main/projects/skynet"
+                   class="inline-block text-cyan-bright font-semibold no-underline transition-colors hover:text-purple-deep arrow-transition">
+                    Explore Skynet
+                </a>
+            </div>
+
+            <!-- Placeholder Project -->
+            <div class="bg-black/40 backdrop-blur-md border border-purple-deep/30 rounded-xl p-8 transition-all hover:-translate-y-1 hover:border-purple-deep hover:shadow-[0_10px_30px_rgba(123,44,191,0.3)]">
+                <h2 class="text-cyan-bright text-3xl font-bold mb-4">More Experiments Coming Soon</h2>
+                <div class="flex flex-wrap gap-2 mb-5">
+                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Placeholder</span>
+                </div>
+                <p class="text-gray-400 mb-5 leading-relaxed">
+                    This monorepo is designed to house multiple experimental projects.
+                    Stay tuned for more exciting experiments!
+                </p>
+                <a href="https://github.com/thevangelist/experiments/tree/main/projects"
+                   class="inline-block text-cyan-bright font-semibold no-underline transition-colors hover:text-purple-deep arrow-transition">
+                    Browse All Projects
+                </a>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center mt-16 pt-8 border-t border-white/10 text-gray-600">
+            <p class="mb-2">Built by <a href="https://github.com/thevangelist" target="_blank" class="text-cyan-bright no-underline hover:text-purple-deep transition-colors">@thevangelist</a></p>
+            <p>Licensed under MIT | <a href="https://github.com/thevangelist/experiments/blob/main/LICENSE" target="_blank" class="text-cyan-bright no-underline hover:text-purple-deep transition-colors">View License</a></p>
+        </footer>
+    </div>
+</body>
+</html>

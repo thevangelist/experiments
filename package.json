@@ -1,0 +1,38 @@
+{
+  "name": "experiments",
+  "version": "1.0.0",
+  "description": "A monorepo for experimental projects and prototypes",
+  "private": true,
+  "workspaces": [
+    "projects/*"
+  ],
+  "scripts": {
+    "clean": "rm -rf node_modules projects/*/node_modules",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "dev:skynet": "npm run dev -w projects/skynet"
+  },
+  "keywords": [
+    "experiments",
+    "monorepo",
+    "prototypes",
+    "ai",
+    "agi"
+  ],
+  "author": "thevangelist",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thevangelist/experiments.git"
+  },
+  "homepage": "https://thevangelist.github.io/experiments",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
