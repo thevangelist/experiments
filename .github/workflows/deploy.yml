@@ -43,6 +43,7 @@ jobs:
       - name: Prepare deployment
         run: |
           mkdir -p _site
+          cp .nojekyll _site/
           cp index.html _site/
           mkdir -p _site/dstretch
           cp -r projects/dstretch/dist/* _site/dstretch/
