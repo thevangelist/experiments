@@ -5,31 +5,66 @@ A powerful, browser-based image enhancement tool specifically designed for rock 
 ## Features
 
 ### Color Enhancement Filters
-- **Adaptive DStretch (Smart)** - Intelligent filter that adapts to image content
-- **YRE (Yellow-Red Enhancement)** - Enhances yellow and red pigments
-- **YRD (Yellow-Red-Deep)** - Deep enhancement for yellow-red tones
-- **LRE (Long Red Enhancement)** - Enhanced red channel processing
-- **LDS (Long Deep Stretch)** - Deep spectral stretching
-- **LAB (L*A*B Enhancement)** - LAB color space processing
-- **CRGB (Color RGB)** - RGB channel enhancement
-- **YBR (Yellow-Blue-Red)** - Multi-channel enhancement
-- **LABI (LAB Invert)** - Inverted LAB processing
+
+**Basic**
+- **Original** - No filter, view unprocessed image
+- **Adaptive** - Auto-detects vegetation, shadows, and rock surfaces. Reduces green (lichen/moss), enhances reds in dark areas
+
+**Reds (Faint Ochre/Hematite)**
+- **YRE** - Yellow-Red Enhancement: Strong red enhancement, faster but noisier
+- **LRE** - Long Red Enhancement: Sharper, less artifact-prone than YRE
+
+**Reds (General/Balanced)**
+- **YRD** - Yellow-Red Deep: Pleasing overall red boost with less wild colors
+- **LRD** - Long Red Deep: Milder variant with balanced enhancement
+
+**General/Yellows**
+- **YDS** - Yellow Deep Stretch: Versatile starter, highlights faint yellows/greens
+- **LDS** - Long Deep Stretch: LAB variant, reduces JPEG noise
+
+**Reds/Blacks (Multi-Pigment)**
+- **YBR** - Yellow-Blue-Red: For subtle reds/blues
+- **LAB** - L*A*B Color Space: Balanced, noise-resistant all-around use
+
+**Blacks/Blues**
+- **YBK** - Yellow-Black: Boosts dark pigments
+- **LBK** - Long Black: Enhanced dark pigment visibility with blue tones
+
+**Yellows/Whites**
+- **YYE** - Yellow-Yellow Enhancement: Amplifies pale yellows
+- **LYE** - Long Yellow Enhancement: Refined edges in schematic art
+- **YWE** - Yellow-White Enhancement: Enhances white pigments
+
+**Quick/High-Contrast**
+- **CRGB** - Color RGB: Fast for initial red reveals, vivid but "crazy" colors
+- **RGB0** - RGB Zero: High-contrast quick scan
 
 ### Advanced Image Processing
-- **Zoned DStretch** - Apply different filters to specific image regions
-- **Smart Masking** - Automatically exclude problematic areas (shadows, highlights, vegetation)
+- **Lighting Presets** - Auto-adjust for different shooting conditions (bright sun, shade, cave, etc.)
 - **Shadow Recovery** - Brighten and recover detail in dark areas
 - **Highlight Recovery** - Darken and preserve detail in bright areas
-- **Clarity Enhancement** - Unsharp mask for improved detail
+- **Clarity Enhancement** - Sharpens edges and textures for improved detail
 - **Dehaze** - Reduce atmospheric haze and improve contrast
-- **Brightness/Contrast/Saturation** - Standard adjustments with fine control
+- **Noise Reduction** - Three algorithms: Median, Gaussian, Bilateral
+- **Sharpening** - Three algorithms: Unsharp, Highpass, Laplacian
+- **Brightness/Contrast/Saturation** - Standard adjustments with fine control (0-200%)
+
+### Zoom & View Controls
+- **Zoom In/Out** - Ctrl/Cmd + Scroll to zoom
+- **Fit to View** - Reset zoom to fit image
+- **100% View** - View at 1:1 pixel ratio (actual size)
+- **Pan** - Click and drag when zoomed in
+- **Rendering Modes** - Switch between Smooth, Crisp, and Pixelated rendering
+- **Original/Edited Toggle** - Compare before and after
 
 ### User Interface
 - Real-time preview of all adjustments
-- Interactive zone drawing for selective filtering
-- Visual mask overlay to show excluded areas
-- Export enhanced images in PNG format
-- Responsive design that works on all devices
+- Mobile-friendly responsive design
+- Collapsible sidebar for small screens
+- Export in original format (JPEG, PNG, WebP)
+- Supports HEIC, TIFF, and WebP image formats
+- Page refresh warning when image is loaded
+- Original image dimensions preserved
 
 ## Installation & Development
 
@@ -82,15 +117,14 @@ The deployment is configured in:
 
 ## Usage
 
-1. **Upload Image**: Click the upload area or drag and drop an image
-2. **Select Filter**: Choose from various DStretch filters
-3. **Adjust Settings**: Fine-tune brightness, contrast, saturation, etc.
-4. **Zone Mode** (Optional): Enable zoned mode to apply different filters to specific areas
-   - Select a filter
-   - Draw a rectangle on the image
-   - Repeat for multiple zones
-5. **Smart Masking** (Optional): Enable to automatically exclude problematic areas
-6. **Download**: Save your enhanced image
+1. **Upload Image**: Click the upload area or drag and drop an image (supports PNG, JPEG, TIFF, HEIC, WebP)
+2. **Select Lighting Preset** (Optional): Choose shooting conditions for automatic adjustments
+3. **Select Filter**: Choose from various DStretch filters organized by pigment type
+4. **Adjust Settings**: Fine-tune brightness, contrast, saturation, enhancement tools
+5. **Apply Noise Reduction/Sharpening** (Optional): Clean up noise or enhance detail
+6. **Zoom & Pan**: Use zoom controls or Ctrl/Cmd + Scroll to inspect details
+7. **Toggle Original/Edited**: Compare before and after
+8. **Download**: Save your enhanced image in original format
 
 ## Technical Details
 
@@ -101,6 +135,8 @@ The deployment is configured in:
 - **Tailwind CSS** - Styling
 - **Canvas API** - Image processing
 - **Lucide React** - Icons
+- **heic2any** - HEIC/HEIF conversion
+- **UTIF** - TIFF support
 
 ### Image Processing
 All image processing is done client-side using the HTML5 Canvas API. The tool:
