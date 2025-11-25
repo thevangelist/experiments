@@ -16,13 +16,22 @@ This repository serves as a centralized location for various experimental projec
 ```
 experiments/
 ├── projects/              # Individual project directories
+│   ├── dstretch/         # DStretch image enhancement tool
+│   │   ├── src/
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   └── README.md
 │   └── skynet/           # Skynet AGI project
 │       ├── src/
 │       ├── package.json
 │       ├── tsconfig.json
 │       └── README.md
-├── docs/                 # GitHub Pages site
-│   └── index.html
+├── docs/                 # GitHub Pages site and documentation
+│   ├── index.html
+│   └── dstretch.md
+├── .github/
+│   └── workflows/        # GitHub Actions workflows
+│       └── deploy-dstretch.yml
 ├── package.json          # Root workspace configuration
 ├── .gitignore           # Comprehensive gitignore
 └── README.md            # This file
@@ -58,6 +67,36 @@ npm run build -w projects/skynet
 
 ## 📦 Projects
 
+### [DStretch - Image Enhancement Tool](projects/dstretch)
+
+🌐 **[Live Demo](https://thevangelist.github.io/experiments/dstretch/)**
+
+A browser-based image enhancement application designed for rock art analysis and archaeological photography.
+
+**Key Features:**
+- 10+ specialized color enhancement filters (YRE, LAB, Adaptive, etc.)
+- Zoned processing - apply different filters to specific regions
+- Smart masking - automatically exclude shadows, highlights, and vegetation
+- Advanced controls: Shadow/Highlight recovery, Clarity, Dehaze
+- Real-time preview and client-side processing
+- Export enhanced images
+
+**Quick Start:**
+```bash
+cd projects/dstretch
+npm install
+npm run dev
+```
+
+**Deploy:**
+```bash
+npm run deploy  # Deploys to GitHub Pages
+```
+
+[Read more →](projects/dstretch/README.md) | [Documentation →](docs/dstretch.md)
+
+---
+
 ### [Skynet AGI](projects/skynet)
 
 A functional artificial general intelligence system with self-modifying neural architecture.
@@ -79,10 +118,6 @@ npm run dev
 [Read more →](projects/skynet/README.md)
 
 ---
-
-### Future Projects
-
-More experimental projects coming soon! This monorepo is designed to be easily extensible.
 
 ## 🛠️ Development
 
