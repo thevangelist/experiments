@@ -70,3 +70,21 @@ input[type="range"]:focus::-webkit-slider-thumb {
 input[type="range"]:focus::-moz-range-thumb {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
+
+/* Slider container with default value indicator */
+.slider-container {
+  position: relative;
+  width: 100%;
+}
+
+.slider-container .default-marker {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 14px;
+  background: #3b82f6;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}

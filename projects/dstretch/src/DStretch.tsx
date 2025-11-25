@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Download, RotateCcw, Eye, Menu, X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Upload, Download, RotateCcw, Eye, Menu, X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
 import heic2any from 'heic2any';
 import UTIF from 'utif';
 
@@ -32,6 +32,7 @@ const DStretch = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStartX, setPanStartX] = useState(0);
   const [panStartY, setPanStartY] = useState(0);
+  const [originalFormat, setOriginalFormat] = useState<'jpeg' | 'png' | 'webp'>('png');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -150,6 +151,15 @@ const DStretch = () => {
   const processImageFile = async (file: File) => {
     setIsProcessing(true);
     setProcessingMessage('Loading image...');
+
+    // Detect and store original format
+    if (file.type === 'image/jpeg' || file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg')) {
+      setOriginalFormat('jpeg');
+    } else if (file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp')) {
+      setOriginalFormat('webp');
+    } else {
+      setOriginalFormat('png');
+    }
 
     let fileToProcess = file;
 
@@ -631,9 +641,17 @@ const DStretch = () => {
     try {
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      // Always save as PNG for lossless quality preservation (required for scientific/archaeological analysis)
-      link.download = `dstretch-${filter}-${timestamp}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
+
+      // Use original format - match the input format
+      const formatMap = {
+        'jpeg': { mime: 'image/jpeg', ext: 'jpg', quality: 0.95 },
+        'png': { mime: 'image/png', ext: 'png', quality: 1.0 },
+        'webp': { mime: 'image/webp', ext: 'webp', quality: 0.95 }
+      };
+
+      const format = formatMap[originalFormat];
+      link.download = `dstretch-${filter}-${timestamp}.${format.ext}`;
+      link.href = canvas.toDataURL(format.mime, format.quality);
       link.click();
 
       setTimeout(() => {
@@ -927,10 +945,10 @@ const DStretch = () => {
               onClick={downloadImage}
               disabled={!image || isDownloading}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
-              title="Save as lossless PNG. All edits preserved at full quality for scientific analysis."
+              title={`Save as ${originalFormat.toUpperCase()}. Matches original format.`}
             >
               <Download size={14} className={isDownloading ? 'animate-bounce' : ''} />
-              <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : 'Download PNG'}</span>
+              <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : `Download ${originalFormat.toUpperCase()}`}</span>
             </button>
           </div>
         </div>
@@ -1019,51 +1037,81 @@ const DStretch = () => {
                 <label className="block text-[10px] font-medium mb-1.5 text-gray-400 uppercase tracking-wide">Basic</label>
                 <div className="space-y-1.5">
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Adjusts overall image lightness. Increase for dark photos, decrease for overexposed images.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Adjusts overall image lightness. Increase for dark photos, decrease for overexposed images.">
                       <span>Brightness</span>
-                      <span className="text-gray-400">{brightness}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{brightness}%</span>
+                        {brightness !== 100 && (
+                          <button onClick={() => setBrightness(100)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 100%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="200"
-                      value={brightness}
-                      onChange={(e) => setBrightness(Number(e.target.value))}
-                      className="w-full"
-                      title="Adjusts overall image lightness"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '50%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={brightness}
+                        onChange={(e) => setBrightness(Number(e.target.value))}
+                        className="w-full"
+                        title="Adjusts overall image lightness"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Difference between light and dark areas. Increase to make pigments pop against rock surface.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Difference between light and dark areas. Increase to make pigments pop against rock surface.">
                       <span>Contrast</span>
-                      <span className="text-gray-400">{contrast}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{contrast}%</span>
+                        {contrast !== 100 && (
+                          <button onClick={() => setContrast(100)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 100%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="200"
-                      value={contrast}
-                      onChange={(e) => setContrast(Number(e.target.value))}
-                      className="w-full"
-                      title="Difference between light and dark areas"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '50%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={contrast}
+                        onChange={(e) => setContrast(Number(e.target.value))}
+                        className="w-full"
+                        title="Difference between light and dark areas"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Color intensity. Increase to make pigment colors more vivid. Decrease for subtle, natural look.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Color intensity. Increase to make pigment colors more vivid. Decrease for subtle, natural look.">
                       <span>Saturation</span>
-                      <span className="text-gray-400">{saturation}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{saturation}%</span>
+                        {saturation !== 100 && (
+                          <button onClick={() => setSaturation(100)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 100%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="200"
-                      value={saturation}
-                      onChange={(e) => setSaturation(Number(e.target.value))}
-                      className="w-full"
-                      title="Color intensity"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '50%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        value={saturation}
+                        onChange={(e) => setSaturation(Number(e.target.value))}
+                        className="w-full"
+                        title="Color intensity"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1073,73 +1121,119 @@ const DStretch = () => {
                 <label className="block text-[10px] font-medium mb-1.5 text-gray-400 uppercase tracking-wide">Enhancement</label>
                 <div className="space-y-1.5">
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Brightens dark shadowed areas without affecting the rest. Reveals pigments in cave entrances or overhangs.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Brightens dark shadowed areas without affecting the rest. Reveals pigments in cave entrances or overhangs.">
                       <span>Shadow Recovery</span>
-                      <span className="text-gray-400">{shadowRecovery}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{shadowRecovery}%</span>
+                        {shadowRecovery !== 0 && (
+                          <button onClick={() => setShadowRecovery(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={shadowRecovery}
-                      onChange={(e) => setShadowRecovery(Number(e.target.value))}
-                      className="w-full"
-                      title="Brightens dark shadowed areas"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={shadowRecovery}
+                        onChange={(e) => setShadowRecovery(Number(e.target.value))}
+                        className="w-full"
+                        title="Brightens dark shadowed areas"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Darkens bright overexposed areas. Recovers detail in sunlit patches or reflective surfaces.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Darkens bright overexposed areas. Recovers detail in sunlit patches or reflective surfaces.">
                       <span>Highlight Recovery</span>
-                      <span className="text-gray-400">{highlightRecovery}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{highlightRecovery}%</span>
+                        {highlightRecovery !== 0 && (
+                          <button onClick={() => setHighlightRecovery(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={highlightRecovery}
-                      onChange={(e) => setHighlightRecovery(Number(e.target.value))}
-                      className="w-full"
-                      title="Darkens bright overexposed areas"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={highlightRecovery}
+                        onChange={(e) => setHighlightRecovery(Number(e.target.value))}
+                        className="w-full"
+                        title="Darkens bright overexposed areas"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Sharpens edges and textures. Makes faint lines and boundaries more visible. Use carefully - can create noise at high values.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Sharpens edges and textures. Makes faint lines and boundaries more visible. Use carefully - can create noise at high values.">
                       <span>Clarity</span>
-                      <span className="text-gray-400">{clarity}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{clarity}%</span>
+                        {clarity !== 0 && (
+                          <button onClick={() => setClarity(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={clarity}
-                      onChange={(e) => setClarity(Number(e.target.value))}
-                      className="w-full"
-                      title="Sharpens edges and textures"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={clarity}
+                        onChange={(e) => setClarity(Number(e.target.value))}
+                        className="w-full"
+                        title="Sharpens edges and textures"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between" title="Cuts through haze and atmospheric effects. Boosts contrast in low-light conditions. Useful for outdoor photos with dust or moisture in the air.">
+                    <label className="block text-xs font-medium mb-1 text-gray-300 flex justify-between items-center" title="Cuts through haze and atmospheric effects. Boosts contrast in low-light conditions. Useful for outdoor photos with dust or moisture in the air.">
                       <span>Dehaze</span>
-                      <span className="text-gray-400">{dehaze}%</span>
+                      <span className="flex items-center gap-1">
+                        <span className="text-gray-400">{dehaze}%</span>
+                        {dehaze !== 0 && (
+                          <button onClick={() => setDehaze(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
+                      </span>
                     </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={dehaze}
-                      onChange={(e) => setDehaze(Number(e.target.value))}
-                      className="w-full"
-                      title="Cuts through haze and atmospheric effects"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={dehaze}
+                        onChange={(e) => setDehaze(Number(e.target.value))}
+                        className="w-full"
+                        title="Cuts through haze and atmospheric effects"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between items-center mb-1">
-                      <label className="text-xs font-medium text-gray-300" title="Reduces image noise and grain. Median: best for salt-and-pepper noise. Gaussian: smooth reduction. Bilateral: edge-preserving.">
-                        Noise Reduction <span className="text-gray-400">{noiseReduction}%</span>
+                      <label className="text-xs font-medium text-gray-300 flex items-center gap-1" title="Reduces image noise and grain. Median: best for salt-and-pepper noise. Gaussian: smooth reduction. Bilateral: edge-preserving.">
+                        <span>Noise Reduction</span>
+                        <span className="text-gray-400">{noiseReduction}%</span>
+                        {noiseReduction !== 0 && (
+                          <button onClick={() => setNoiseReduction(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
                       </label>
                       <select
                         value={noiseAlgorithm}
@@ -1152,21 +1246,30 @@ const DStretch = () => {
                         <option value="bilateral">Bilateral</option>
                       </select>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={noiseReduction}
-                      onChange={(e) => setNoiseReduction(Number(e.target.value))}
-                      className="w-full"
-                      title="Reduces image noise and grain"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={noiseReduction}
+                        onChange={(e) => setNoiseReduction(Number(e.target.value))}
+                        className="w-full"
+                        title="Reduces image noise and grain"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between items-center mb-1">
-                      <label className="text-xs font-medium text-gray-300" title="Enhances edge definition and detail. Unsharp: standard sharpening. Highpass: aggressive. Laplacian: edge enhancement.">
-                        Sharpening <span className="text-gray-400">{sharpening}%</span>
+                      <label className="text-xs font-medium text-gray-300 flex items-center gap-1" title="Enhances edge definition and detail. Unsharp: standard sharpening. Highpass: aggressive. Laplacian: edge enhancement.">
+                        <span>Sharpening</span>
+                        <span className="text-gray-400">{sharpening}%</span>
+                        {sharpening !== 0 && (
+                          <button onClick={() => setSharpening(0)} className="text-gray-500 hover:text-blue-400 transition-colors" title="Reset to 0%">
+                            <RefreshCw size={10} />
+                          </button>
+                        )}
                       </label>
                       <select
                         value={sharpenAlgorithm}
@@ -1179,15 +1282,18 @@ const DStretch = () => {
                         <option value="laplacian">Laplacian</option>
                       </select>
                     </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={sharpening}
-                      onChange={(e) => setSharpening(Number(e.target.value))}
-                      className="w-full"
-                      title="Enhances edge definition and detail"
-                    />
+                    <div className="slider-container">
+                      <div className="default-marker" style={{ left: '0%' }}></div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={sharpening}
+                        onChange={(e) => setSharpening(Number(e.target.value))}
+                        className="w-full"
+                        title="Enhances edge definition and detail"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
