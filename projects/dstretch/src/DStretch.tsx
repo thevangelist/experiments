@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Download, RotateCcw, Eye, Menu, X, ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
+import { Upload, Download, RotateCcw, Eye, Menu, X, ZoomIn, ZoomOut, Maximize2, RefreshCw, Maximize } from 'lucide-react';
 import heic2any from 'heic2any';
 import UTIF from 'utif';
 
@@ -34,6 +34,7 @@ const DStretch = () => {
   const [panStartY, setPanStartY] = useState(0);
   const [originalFormat, setOriginalFormat] = useState<'jpeg' | 'png' | 'webp'>('png');
   const [isEditing, setIsEditing] = useState(false);
+  const [renderingMode, setRenderingMode] = useState<'smooth' | 'crisp' | 'pixelated'>('smooth');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -302,6 +303,19 @@ const DStretch = () => {
       });
     }
   }, [image, filter, brightness, contrast, saturation, dehaze, clarity, shadowRecovery, highlightRecovery, adaptiveEnhancement, showOriginal, noiseReduction, noiseAlgorithm, sharpening, sharpenAlgorithm]);
+
+  // Warn user before leaving page if image is loaded
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (image) {
+        e.preventDefault();
+        e.returnValue = ''; // Required for Chrome
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [image]);
 
   const calculateHistogram = () => {
     const canvas = canvasRef.current;
@@ -813,6 +827,29 @@ const DStretch = () => {
     setPanY(0);
   };
 
+  const handleZoom100 = () => {
+    // Zoom to 1:1 pixel ratio (actual size)
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Get the display size of the canvas
+    const displayWidth = canvas.offsetWidth;
+    const displayHeight = canvas.offsetHeight;
+
+    // Get the actual canvas size
+    const actualWidth = canvas.width;
+    const actualHeight = canvas.height;
+
+    // Calculate zoom needed to show actual pixels
+    const zoomX = actualWidth / displayWidth;
+    const zoomY = actualHeight / displayHeight;
+    const actualZoom = Math.max(zoomX, zoomY);
+
+    setZoom(actualZoom);
+    setPanX(0);
+    setPanY(0);
+  };
+
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
@@ -863,10 +900,11 @@ const DStretch = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
       {/* Top Header */}
       <div className="bg-gray-950 border-b border-gray-800 px-3 md:px-6 py-3">
         <div className="flex items-center justify-between gap-2 md:gap-4">
+          {/* Left: Branding */}
           <div className="flex items-center gap-2 md:gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -879,90 +917,114 @@ const DStretch = () => {
               <h1 className="text-lg md:text-xl font-bold">DStretch</h1>
               <p className="text-xs text-gray-500 hidden sm:block">Rock Art Enhancement</p>
             </div>
+          </div>
 
-            {/* Histogram Display */}
-            {histogram && image && (
-              <div className="hidden md:block bg-gray-900 rounded p-2 border border-gray-700" title="RGB Histogram: Shows distribution of red, green, and blue tones. Peaks on left = dark pixels, right = bright pixels. Use to check if colors are clipping or if image needs adjustment.">
-                <div className="flex items-end gap-px h-12 w-48 md:w-64">
-                  {Array.from({ length: 64 }).map((_, i) => {
-                    const binSize = 4;
-                    const rVal = histogram.r.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
-                    const gVal = histogram.g.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
-                    const bVal = histogram.b.slice(i * binSize, (i + 1) * binSize).reduce((a, b) => a + b, 0);
-                    const max = Math.max(...histogram.r, ...histogram.g, ...histogram.b);
-                    const minHeight = 2; // Minimum height in pixels to make bars visible
-                    return (
-                      <div key={i} className="flex-1 flex flex-col justify-end items-center gap-px min-h-[2px]">
-                        <div className="w-full bg-red-500 opacity-70" style={{ height: `${Math.max(minHeight, (rVal / max) * 100)}%` }}></div>
-                        <div className="w-full bg-green-500 opacity-70" style={{ height: `${Math.max(minHeight, (gVal / max) * 100)}%` }}></div>
-                        <div className="w-full bg-blue-500 opacity-70" style={{ height: `${Math.max(minHeight, (bVal / max) * 100)}%` }}></div>
-                      </div>
-                    );
-                  })}
+          {/* Center: View Controls */}
+          <div className="flex items-center gap-1 md:gap-2">
+            {image && (
+              <>
+                <button
+                  onClick={() => setShowOriginal(!showOriginal)}
+                  className={`${showOriginal ? 'bg-green-600' : 'bg-gray-800'} hover:bg-gray-700 px-2 md:px-3 py-1.5 md:py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2 transition-colors`}
+                  title="Toggle between original and edited view"
+                >
+                  <Eye size={14} />
+                  <span className="hidden sm:inline">{showOriginal ? 'Edited' : 'Original'}</span>
+                </button>
+
+                <div className="hidden md:flex items-center gap-1 bg-gray-900 rounded p-1 border border-gray-700">
+                  <span className="text-xs text-gray-400 px-1">Render:</span>
+                  <button
+                    onClick={() => setRenderingMode('smooth')}
+                    className={`${renderingMode === 'smooth' ? 'bg-blue-600' : 'bg-gray-800'} hover:bg-gray-700 px-2 py-1 rounded text-xs transition-colors`}
+                    title="Smooth antialiasing (default)"
+                  >
+                    Smooth
+                  </button>
+                  <button
+                    onClick={() => setRenderingMode('crisp')}
+                    className={`${renderingMode === 'crisp' ? 'bg-blue-600' : 'bg-gray-800'} hover:bg-gray-700 px-2 py-1 rounded text-xs transition-colors`}
+                    title="Crisp edges"
+                  >
+                    Crisp
+                  </button>
+                  <button
+                    onClick={() => setRenderingMode('pixelated')}
+                    className={`${renderingMode === 'pixelated' ? 'bg-blue-600' : 'bg-gray-800'} hover:bg-gray-700 px-2 py-1 rounded text-xs transition-colors`}
+                    title="Pixelated (nearest neighbor)"
+                  >
+                    Pixel
+                  </button>
                 </div>
-              </div>
+              </>
             )}
           </div>
 
+          {/* Right: Zoom, Actions */}
           <div className="flex gap-1 md:gap-2">
-            <button
-              onClick={() => setShowOriginal(!showOriginal)}
-              disabled={!image}
-              className={`${showOriginal ? 'bg-green-600' : 'bg-gray-800'} hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2`}
-              title="Toggle between original and edited view. Click repeatedly to compare changes."
-            >
-              <Eye size={14} />
-              <span className="hidden sm:inline">{showOriginal ? 'Edited' : 'Original'}</span>
-            </button>
-            <button
-              onClick={resetSettings}
-              className="bg-gray-800 hover:bg-gray-700 px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
-              title="Reset all filters and adjustments to default values"
-            >
-              <RotateCcw size={14} />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
-            <button
-              onClick={handleZoomOut}
-              disabled={!image}
-              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
-              title="Zoom out (Ctrl/Cmd + Scroll)"
-            >
-              <ZoomOut size={14} />
-            </button>
-            <button
-              onClick={handleZoomFit}
-              disabled={!image}
-              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
-              title="Fit to view (Reset zoom)"
-            >
-              <Maximize2 size={14} />
-            </button>
-            <button
-              onClick={handleZoomIn}
-              disabled={!image}
-              className="bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 py-2 rounded text-xs md:text-sm"
-              title="Zoom in (Ctrl/Cmd + Scroll)"
-            >
-              <ZoomIn size={14} />
-            </button>
-            <span className="hidden md:inline text-xs text-gray-500">
-              {zoom !== 1 ? `${Math.round(zoom * 100)}%` : ''}
-            </span>
+            {image && (
+              <>
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-1 bg-gray-900 rounded border border-gray-700">
+                  <button
+                    onClick={handleZoomOut}
+                    className="bg-gray-800 hover:bg-gray-700 px-2 py-1.5 md:py-2 rounded-l text-xs md:text-sm"
+                    title="Zoom out (Ctrl/Cmd + Scroll)"
+                  >
+                    <ZoomOut size={14} />
+                  </button>
+                  <button
+                    onClick={handleZoomFit}
+                    className="bg-gray-800 hover:bg-gray-700 px-2 py-1.5 md:py-2 text-xs md:text-sm"
+                    title="Fit to view"
+                  >
+                    <Maximize2 size={14} />
+                  </button>
+                  <button
+                    onClick={handleZoom100}
+                    className="bg-gray-800 hover:bg-gray-700 px-2 py-1.5 md:py-2 text-xs md:text-sm"
+                    title="100% (1:1 pixels)"
+                  >
+                    <Maximize size={14} />
+                  </button>
+                  <button
+                    onClick={handleZoomIn}
+                    className="bg-gray-800 hover:bg-gray-700 px-2 py-1.5 md:py-2 text-xs md:text-sm"
+                    title="Zoom in (Ctrl/Cmd + Scroll)"
+                  >
+                    <ZoomIn size={14} />
+                  </button>
+                  <span className="hidden md:inline text-xs text-gray-400 px-2 min-w-[3rem] text-center">
+                    {zoom !== 1 ? `${Math.round(zoom * 100)}%` : '100%'}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                <button
+                  onClick={resetSettings}
+                  className="bg-gray-800 hover:bg-gray-700 px-2 md:px-3 py-1.5 md:py-2 rounded text-xs md:text-sm flex items-center gap-1"
+                  title="Reset all adjustments"
+                >
+                  <RotateCcw size={14} />
+                  <span className="hidden lg:inline">Reset</span>
+                </button>
+              </>
+            )}
+
             <button
               onClick={downloadImage}
               disabled={!image || isDownloading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
-              title={`Save as ${originalFormat.toUpperCase()}. Matches original format.`}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-800 disabled:cursor-not-allowed px-2 md:px-4 py-1.5 md:py-2 rounded text-xs md:text-sm flex items-center gap-1 md:gap-2"
+              title={image ? `Save as ${originalFormat.toUpperCase()}` : 'Upload an image first'}
             >
               <Download size={14} className={isDownloading ? 'animate-bounce' : ''} />
-              <span className="hidden sm:inline">{isDownloading ? 'Downloading...' : `Download ${originalFormat.toUpperCase()}`}</span>
+              <span className="hidden sm:inline">{isDownloading ? 'Saving...' : 'Download'}</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-65px)] overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar Controls */}
         <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:relative z-20 w-80 bg-gray-800 border-r border-gray-700 flex flex-col overflow-hidden h-full transition-transform duration-300`}>
           <div className="flex-1 overflow-y-auto">
@@ -1379,7 +1441,8 @@ const DStretch = () => {
                     maxWidth: '100%',
                     maxHeight: 'calc(100vh - 120px)',
                     objectFit: 'contain',
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    imageRendering: renderingMode === 'smooth' ? 'auto' : renderingMode === 'crisp' ? 'crisp-edges' : 'pixelated'
                   }}
                 />
               </div>
