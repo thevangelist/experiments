@@ -702,8 +702,16 @@ const DStretch = () => {
   const applyNoiseReduction = (data: Uint8ClampedArray, width: number, height: number, algorithm: string, strength: number) => {
     if (strength === 0) return;
 
+    // Safety check: limit noise reduction for very large images
+    const pixelCount = width * height;
+    if (pixelCount > 10000000) { // 10 megapixels
+      console.warn('Image too large for noise reduction, skipping');
+      return;
+    }
+
     const tempData = new Uint8ClampedArray(data);
-    const radius = Math.max(1, Math.floor(strength / 25));
+    // Limit radius to prevent performance issues
+    const radius = Math.max(1, Math.min(3, Math.floor(strength / 33)));
 
     for (let y = radius; y < height - radius; y++) {
       for (let x = radius; x < width - radius; x++) {
@@ -766,6 +774,13 @@ const DStretch = () => {
 
   const applySharpening = (data: Uint8ClampedArray, width: number, height: number, algorithm: string, strength: number) => {
     if (strength === 0) return;
+
+    // Safety check: limit sharpening for very large images
+    const pixelCount = width * height;
+    if (pixelCount > 15000000) { // 15 megapixels
+      console.warn('Image too large for sharpening, skipping');
+      return;
+    }
 
     const tempData = new Uint8ClampedArray(data);
     const amount = strength / 100;
