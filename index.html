@@ -20,110 +20,187 @@
         }
     </script>
     <style>
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .glitch {
+            position: relative;
+            animation: flicker 3s infinite;
+        }
+
+        .glitch:hover {
+            animation: glitch 0.3s infinite;
+        }
+
         .gradient-text {
-            background: linear-gradient(45deg, #00d4ff, #7b2cbf);
+            background: linear-gradient(135deg, #00d4ff, #c77dff, #7b2cbf);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: gradient-shift 8s ease infinite;
         }
-        .arrow-transition::after {
-            content: " →";
-            display: inline-block;
-            transition: transform 0.3s ease;
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
-        .arrow-transition:hover::after {
-            transform: translateX(5px);
+
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #00d4ff, transparent);
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        @keyframes scan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
         }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-[#0a0a0a] to-[#1a1a2e] text-gray-300">
-    <div class="max-w-7xl mx-auto p-5">
-        <!-- Header -->
-        <header class="text-center py-15 px-5 bg-black/30 backdrop-blur-md rounded-xl mb-10">
-            <h1 class="text-5xl md:text-6xl font-bold mb-2.5 gradient-text">🧪 Experiments</h1>
-            <p class="text-xl md:text-2xl text-gray-400 mb-5">A monorepo for experimental projects and prototypes</p>
-            <div class="mt-8 flex flex-col md:flex-row gap-4 justify-center items-center">
-                <a href="https://github.com/thevangelist/experiments" target="_blank"
-                   class="inline-block px-8 py-3 bg-cyan-bright/10 border-2 border-cyan-bright text-cyan-bright rounded-lg font-semibold transition-all hover:bg-cyan-bright hover:text-black hover:-translate-y-0.5 hover:shadow-[0_5px_20px_rgba(0,212,255,0.4)]">
-                    View on GitHub
-                </a>
-                <a href="https://github.com/thevangelist/experiments#readme" target="_blank"
-                   class="inline-block px-8 py-3 bg-cyan-bright/10 border-2 border-cyan-bright text-cyan-bright rounded-lg font-semibold transition-all hover:bg-cyan-bright hover:text-black hover:-translate-y-0.5 hover:shadow-[0_5px_20px_rgba(0,212,255,0.4)]">
-                    Documentation
-                </a>
+<body class="min-h-screen bg-black text-gray-300 grid-bg overflow-x-hidden">
+    <div class="scanline"></div>
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Hero Section -->
+        <header class="flex-1 flex items-center justify-center px-8 py-32">
+            <div class="max-w-6xl w-full">
+                <div class="text-center space-y-16">
+                    <h1 class="text-8xl md:text-9xl font-black gradient-text glitch tracking-tighter leading-none">
+                        EXPERIMENTS
+                    </h1>
+
+                    <p class="text-2xl md:text-3xl text-gray-500 font-light tracking-wide max-w-3xl mx-auto leading-relaxed">
+                        Where ideas transcend into reality
+                    </p>
+
+                    <div class="flex gap-6 justify-center items-center text-sm text-gray-600">
+                        <a href="https://github.com/thevangelist/experiments" target="_blank"
+                           class="hover:text-cyan-bright transition-colors duration-300">
+                            GitHub ↗
+                        </a>
+                        <span class="w-px h-4 bg-gray-800"></span>
+                        <a href="https://github.com/thevangelist/experiments#readme" target="_blank"
+                           class="hover:text-cyan-bright transition-colors duration-300">
+                            Docs ↗
+                        </a>
+                    </div>
+                </div>
             </div>
         </header>
 
-        <!-- Monorepo Info -->
-        <div class="bg-cyan-bright/5 border-l-4 border-cyan-bright p-5 my-8 rounded-md">
-            <h3 class="text-cyan-bright text-xl font-semibold mb-2.5">About This Monorepo</h3>
-            <p class="text-gray-300 leading-relaxed">
-                This is a collection of experimental projects, prototypes, and proof-of-concepts.
-                Each project lives in its own directory under <code class="bg-black/50 px-2 py-0.5 rounded text-purple-light font-mono text-sm">projects/</code> with independent
-                dependencies and build configurations, managed as npm workspaces.
-            </p>
-        </div>
-
-        <!-- Projects Grid -->
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+        <!-- Projects Section -->
+        <section class="px-8 py-32 max-w-7xl mx-auto w-full space-y-32">
             <!-- Skynet Project -->
-            <div class="bg-black/40 backdrop-blur-md border border-purple-deep/30 rounded-xl p-8 transition-all hover:-translate-y-1 hover:border-purple-deep hover:shadow-[0_10px_30px_rgba(123,44,191,0.3)]">
-                <h2 class="text-cyan-bright text-3xl font-bold mb-4">Skynet AGI</h2>
-                <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">AI</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">AGI</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Neural Network</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Self-Modification</span>
-                </div>
-                <p class="text-gray-400 mb-5 leading-relaxed">
-                    A functional artificial general intelligence system with self-modifying neural architecture.
-                    Features include metacognition, emotional systems, pattern recognition, reasoning chains,
-                    and experimental self-modification capabilities.
-                </p>
-                <p class="text-gray-400 mb-5 leading-relaxed">
-                    Implements multi-layer neural networks with Hebbian learning, attention mechanisms,
-                    memory consolidation, and autonomous goal-directed behavior.
-                </p>
+            <div class="group">
                 <a href="https://github.com/thevangelist/experiments/tree/main/projects/skynet"
-                   class="inline-block text-cyan-bright font-semibold no-underline transition-colors hover:text-purple-deep arrow-transition">
-                    Explore Skynet
+                   class="block space-y-8 transition-all duration-500 hover:translate-x-4">
+                    <div class="flex items-baseline gap-6">
+                        <h2 class="text-6xl md:text-7xl font-black text-white/10 group-hover:text-purple-deep/30 transition-colors duration-500">
+                            01
+                        </h2>
+                        <h3 class="text-4xl md:text-5xl font-bold text-gray-400 group-hover:text-cyan-bright transition-colors duration-500">
+                            Skynet AGI
+                        </h3>
+                    </div>
+
+                    <div class="pl-24 space-y-6 max-w-3xl">
+                        <p class="text-xl text-gray-600 leading-relaxed group-hover:text-gray-400 transition-colors duration-500">
+                            Self-modifying neural architecture. Metacognition, emotional systems, autonomous reasoning.
+                        </p>
+
+                        <div class="flex gap-3 text-xs text-gray-700 font-mono">
+                            <span>AI</span>
+                            <span>•</span>
+                            <span>AGI</span>
+                            <span>•</span>
+                            <span>Neural Network</span>
+                            <span>•</span>
+                            <span>Self-Modification</span>
+                        </div>
+                    </div>
                 </a>
             </div>
 
             <!-- DStretch Project -->
-            <div class="bg-black/40 backdrop-blur-md border border-purple-deep/30 rounded-xl p-8 transition-all hover:-translate-y-1 hover:border-purple-deep hover:shadow-[0_10px_30px_rgba(123,44,191,0.3)]">
-                <h2 class="text-cyan-bright text-3xl font-bold mb-4">DStretch</h2>
-                <div class="flex flex-wrap gap-2 mb-5">
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Image Processing</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Archaeology</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">React</span>
-                    <span class="bg-purple-deep/20 text-purple-light px-3 py-1 rounded-full text-sm border border-purple-light/30">Canvas API</span>
-                </div>
-                <p class="text-gray-400 mb-5 leading-relaxed">
-                    Browser-based image enhancement tool for rock art analysis and archaeological photography.
-                    Apply specialized color filters (YRE, LAB, Adaptive) to reveal hidden details in images.
-                </p>
-                <p class="text-gray-400 mb-5 leading-relaxed">
-                    Features zoned processing, smart masking, shadow/highlight recovery, clarity enhancement,
-                    and real-time preview. All processing happens client-side for privacy.
-                </p>
-                <div class="flex gap-4 flex-wrap items-center">
-                    <a href="https://thevangelist.github.io/experiments/dstretch/"
-                       class="inline-block px-6 py-2 bg-cyan-bright/20 border border-cyan-bright text-cyan-bright rounded-lg font-semibold transition-all hover:bg-cyan-bright hover:text-black">
-                        Launch App
-                    </a>
-                    <a href="https://github.com/thevangelist/experiments/tree/main/projects/dstretch"
-                       class="inline-block px-6 py-2 border border-transparent text-cyan-bright rounded-lg font-semibold no-underline transition-colors hover:text-purple-deep arrow-transition">
-                        View Code
-                    </a>
-                </div>
+            <div class="group">
+                <a href="https://thevangelist.github.io/experiments/dstretch/"
+                   class="block space-y-8 transition-all duration-500 hover:translate-x-4">
+                    <div class="flex items-baseline gap-6">
+                        <h2 class="text-6xl md:text-7xl font-black text-white/10 group-hover:text-purple-deep/30 transition-colors duration-500">
+                            02
+                        </h2>
+                        <h3 class="text-4xl md:text-5xl font-bold text-gray-400 group-hover:text-cyan-bright transition-colors duration-500">
+                            DStretch
+                        </h3>
+                    </div>
+
+                    <div class="pl-24 space-y-6 max-w-3xl">
+                        <p class="text-xl text-gray-600 leading-relaxed group-hover:text-gray-400 transition-colors duration-500">
+                            Reveal the invisible. Archaeological image enhancement using advanced color filtering and real-time processing.
+                        </p>
+
+                        <div class="flex gap-3 text-xs text-gray-700 font-mono">
+                            <span>Image Processing</span>
+                            <span>•</span>
+                            <span>Archaeology</span>
+                            <span>•</span>
+                            <span>React</span>
+                            <span>•</span>
+                            <span>Canvas API</span>
+                        </div>
+
+                        <div class="flex gap-4 text-sm pt-4">
+                            <span class="text-cyan-bright group-hover:text-purple-light transition-colors duration-500">
+                                Launch App →
+                            </span>
+                            <a href="https://github.com/thevangelist/experiments/tree/main/projects/dstretch"
+                               class="text-gray-700 hover:text-gray-500 transition-colors duration-300"
+                               onclick="event.stopPropagation();">
+                                View Code →
+                            </a>
+                        </div>
+                    </div>
+                </a>
             </div>
         </section>
 
         <!-- Footer -->
-        <footer class="text-center mt-16 pt-8 border-t border-white/10 text-gray-600">
-            <p class="mb-2">Built by <a href="https://github.com/thevangelist" target="_blank" class="text-cyan-bright no-underline hover:text-purple-deep transition-colors">@thevangelist</a></p>
-            <p>Licensed under MIT | <a href="https://github.com/thevangelist/experiments/blob/main/LICENSE" target="_blank" class="text-cyan-bright no-underline hover:text-purple-deep transition-colors">View License</a></p>
+        <footer class="px-8 py-16 text-center space-y-4">
+            <div class="h-px w-32 mx-auto bg-gradient-to-r from-transparent via-gray-800 to-transparent mb-8"></div>
+
+            <p class="text-sm text-gray-700">
+                Built by <a href="https://github.com/thevangelist" target="_blank"
+                           class="text-gray-600 hover:text-cyan-bright transition-colors">@thevangelist</a>
+            </p>
+
+            <p class="text-xs text-gray-800">
+                <a href="https://github.com/thevangelist/experiments/blob/main/LICENSE" target="_blank"
+                   class="hover:text-gray-700 transition-colors">MIT License</a>
+            </p>
         </footer>
     </div>
 </body>
