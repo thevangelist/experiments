@@ -928,9 +928,12 @@ const DStretch = () => {
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <div>
-              <h1 className="text-lg md:text-xl font-bold">DStretch</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">Rock Art Enhancement</p>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="DStretch Logo" className="w-10 h-10 md:w-12 md:h-12" />
+              <div>
+                <h1 className="text-lg md:text-xl font-bold">DStretch</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Rock Art Enhancement</p>
+              </div>
             </div>
           </div>
 
