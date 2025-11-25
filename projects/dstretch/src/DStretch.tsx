@@ -33,6 +33,7 @@ const DStretch = () => {
   const [panStartX, setPanStartX] = useState(0);
   const [panStartY, setPanStartY] = useState(0);
   const [originalFormat, setOriginalFormat] = useState<'jpeg' | 'png' | 'webp'>('png');
+  const [isEditing, setIsEditing] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
@@ -291,8 +292,14 @@ const DStretch = () => {
 
   useEffect(() => {
     if (image) {
-      applyFilter();
-      calculateHistogram();
+      setIsEditing(true);
+      // Use requestAnimationFrame to ensure spinner appears before heavy processing
+      requestAnimationFrame(() => {
+        applyFilter();
+        calculateHistogram();
+        // Small delay to ensure processing completes
+        setTimeout(() => setIsEditing(false), 50);
+      });
     }
   }, [image, filter, brightness, contrast, saturation, dehaze, clarity, shadowRecovery, highlightRecovery, adaptiveEnhancement, showOriginal, noiseReduction, noiseAlgorithm, sharpening, sharpenAlgorithm]);
 
@@ -1325,7 +1332,18 @@ const DStretch = () => {
           {imageDimensions && (
             <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 text-xs text-gray-400 flex items-center justify-between">
               <span>Image: {imageDimensions.width} × {imageDimensions.height} px</span>
-              <span className="text-green-400">✓ Original size preserved</span>
+              <div className="flex items-center gap-2">
+                {isEditing && (
+                  <span className="flex items-center gap-1 text-blue-400">
+                    <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing
+                  </span>
+                )}
+                <span className="text-green-400">✓ Original size preserved</span>
+              </div>
             </div>
           )}
 
