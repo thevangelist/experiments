@@ -26,12 +26,10 @@ experiments/
 │       ├── package.json
 │       ├── tsconfig.json
 │       └── README.md
-├── docs/                 # GitHub Pages site and documentation
-│   ├── index.html
-│   └── dstretch.md
 ├── .github/
 │   └── workflows/        # GitHub Actions workflows
-│       └── deploy-dstretch.yml
+│       └── deploy.yml
+├── index.html            # GitHub Pages homepage
 ├── package.json          # Root workspace configuration
 ├── .gitignore           # Comprehensive gitignore
 └── README.md            # This file
@@ -93,7 +91,7 @@ npm run dev
 npm run deploy  # Deploys to GitHub Pages
 ```
 
-[Read more →](projects/dstretch/README.md) | [Documentation →](docs/dstretch.md)
+[Read more →](projects/dstretch/README.md)
 
 ---
 
